@@ -1,4 +1,4 @@
-# Nama Kelompok: Kelompok Keren (Ganti dengan nama kelompokmu)
+# Nama Kelompok: GreenRide
 
 ## Anggota Kelompok:
 1. Aqidatul Izzah - 24/533730/TK/59137
