@@ -1,0 +1,18 @@
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:c="using:GreenRide.UI.Controls" x:Class="GreenRide.UI.Views.SplashView">
+  <Grid>
+    <Grid.Background>
+      <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+        <GradientStop Color="#FFFFFF" Offset="0" />
+        <GradientStop Color="#C8E6C9" Offset="1" />
+      </LinearGradientBrush>
+    </Grid.Background>
+    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="16">
+      <c:LogoMark Width="150" Height="150" />
+      <TextBlock Text="GreenRide" FontSize="38" FontWeight="ExtraBold" HorizontalAlignment="Center"
+                 Foreground="{DynamicResource GrPrimaryDark}" />
+      <TextBlock Text="Tantangan Mengurangi Emisi Kendaraan" Classes="muted" HorizontalAlignment="Center" />
+      <ProgressBar IsIndeterminate="True" Width="150" Margin="0,12,0,0"
+                   Foreground="{DynamicResource GrBright}" />
+    </StackPanel>
+  </Grid>
+</UserControl>

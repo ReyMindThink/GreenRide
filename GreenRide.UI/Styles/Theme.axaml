@@ -1,0 +1,192 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <Styles.Resources>
+    <!-- Palet hijau: tinggi kontras & hidup -->
+    <SolidColorBrush x:Key="GrPrimary"      Color="#2E7D32" />
+    <SolidColorBrush x:Key="GrPrimaryDark"  Color="#1B5E20" />
+    <SolidColorBrush x:Key="GrBright"       Color="#43A047" />
+    <SolidColorBrush x:Key="GrLight"        Color="#E8F5E9" />
+    <SolidColorBrush x:Key="GrMint"         Color="#C8E6C9" />
+    <SolidColorBrush x:Key="GrBackground"   Color="#F1F8E9" />
+    <SolidColorBrush x:Key="GrAccent"       Color="#F9A825" />
+    <SolidColorBrush x:Key="GrText"         Color="#14301A" />
+    <SolidColorBrush x:Key="GrMuted"        Color="#4F6B54" />
+    <SolidColorBrush x:Key="GrDanger"       Color="#C62828" />
+    <BoxShadows x:Key="GrShadow">0 6 18 0 #262E7D32</BoxShadows>
+
+    <LinearGradientBrush x:Key="GrHero" StartPoint="0%,0%" EndPoint="100%,100%">
+      <GradientStop Color="#1B5E20" Offset="0" />
+      <GradientStop Color="#43A047" Offset="1" />
+    </LinearGradientBrush>
+  </Styles.Resources>
+
+  <!-- Teks -->
+  <Style Selector="TextBlock.h1"><Setter Property="FontSize" Value="28" /><Setter Property="FontWeight" Value="ExtraBold" /></Style>
+  <Style Selector="TextBlock.h2"><Setter Property="FontSize" Value="18" /><Setter Property="FontWeight" Value="Bold" /></Style>
+  <Style Selector="TextBlock.muted"><Setter Property="Foreground" Value="{DynamicResource GrMuted}" /></Style>
+  <Style Selector="TextBlock.error"><Setter Property="Foreground" Value="{DynamicResource GrDanger}" /><Setter Property="FontWeight" Value="SemiBold" /></Style>
+  <Style Selector="TextBlock.big"><Setter Property="FontSize" Value="34" /><Setter Property="FontWeight" Value="ExtraBold" /><Setter Property="Foreground" Value="{DynamicResource GrPrimary}" /></Style>
+
+  <!-- Kartu -->
+  <Style Selector="Border.card">
+    <Setter Property="Background" Value="White" />
+    <Setter Property="CornerRadius" Value="22" />
+    <Setter Property="Padding" Value="18" />
+    <Setter Property="BoxShadow" Value="{DynamicResource GrShadow}" />
+  </Style>
+  <Style Selector="Border.hero">
+    <Setter Property="Background" Value="{DynamicResource GrHero}" />
+    <Setter Property="CornerRadius" Value="26" />
+    <Setter Property="Padding" Value="22" />
+    <Setter Property="BoxShadow" Value="{DynamicResource GrShadow}" />
+  </Style>
+
+  <!-- Input -->
+  <Style Selector="TextBox">
+    <Setter Property="CornerRadius" Value="12" />
+    <Setter Property="Padding" Value="14,12" />
+    <Setter Property="MinHeight" Value="46" />
+  </Style>
+
+  <!-- Tombol utama -->
+  <Style Selector="Button.primary">
+    <Setter Property="Background" Value="{DynamicResource GrPrimary}" />
+    <Setter Property="Foreground" Value="White" />
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="FontSize" Value="16" />
+    <Setter Property="Padding" Value="20,13" />
+    <Setter Property="CornerRadius" Value="14" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Button.primary:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource GrPrimaryDark}" />
+    <Setter Property="Foreground" Value="White" />
+  </Style>
+  <Style Selector="Button.primary:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="#144A18" />
+    <Setter Property="Foreground" Value="White" />
+  </Style>
+  <Style Selector="Button.primary:disabled /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="#9DB89F" />
+    <Setter Property="Foreground" Value="White" />
+  </Style>
+
+  <!-- Tombol teks -->
+  <Style Selector="Button.ghost">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{DynamicResource GrPrimary}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="CornerRadius" Value="12" />
+    <Setter Property="Padding" Value="14,10" />
+  </Style>
+  <Style Selector="Button.ghost:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource GrLight}" />
+    <Setter Property="Foreground" Value="{DynamicResource GrPrimaryDark}" />
+  </Style>
+
+  <!-- Chip -->
+  <Style Selector="Button.chip">
+    <Setter Property="Background" Value="{DynamicResource GrLight}" />
+    <Setter Property="Foreground" Value="{DynamicResource GrPrimaryDark}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="CornerRadius" Value="20" />
+    <Setter Property="Padding" Value="14,8" />
+  </Style>
+  <Style Selector="Button.chip:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource GrMint}" />
+    <Setter Property="Foreground" Value="{DynamicResource GrPrimaryDark}" />
+  </Style>
+
+  <!-- Navigasi samping (jendela lebar) -->
+  <Style Selector="Button.sidenav">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="White" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="FontSize" Value="15" />
+    <Setter Property="Padding" Value="16,12" />
+    <Setter Property="CornerRadius" Value="14" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Left" />
+  </Style>
+  <Style Selector="Button.sidenav:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="#33FFFFFF" />
+    <Setter Property="Foreground" Value="White" />
+  </Style>
+  <Style Selector="Button.sidenav.active /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource GrBright}" />
+    <Setter Property="Foreground" Value="White" />
+  </Style>
+
+  <!-- Navigasi bawah (jendela sempit / HP) -->
+  <Style Selector="Button.bottomnav">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{DynamicResource GrMuted}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="Padding" Value="4,8" />
+    <Setter Property="CornerRadius" Value="14" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Button.bottomnav:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource GrLight}" />
+    <Setter Property="Foreground" Value="{DynamicResource GrPrimaryDark}" />
+  </Style>
+  <Style Selector="Button.bottomnav.active /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource GrMint}" />
+    <Setter Property="Foreground" Value="{DynamicResource GrPrimaryDark}" />
+  </Style>
+
+  <!-- Pilihan moda (ListBox berisi kartu emoji) -->
+  <Style Selector="ListBox.modes"><Setter Property="Background" Value="Transparent" /><Setter Property="Padding" Value="0" /></Style>
+  <Style Selector="ListBox.modes ListBoxItem">
+    <Setter Property="Margin" Value="5" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="Width" Value="104" />
+    <Setter Property="Height" Value="116" />
+    <Setter Property="CornerRadius" Value="20" />
+    <Setter Property="Background" Value="White" />
+    <Setter Property="BorderThickness" Value="2" />
+    <Setter Property="BorderBrush" Value="{DynamicResource GrMint}" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+  </Style>
+  <Style Selector="ListBox.modes ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource GrLight}" />
+  </Style>
+  <Style Selector="ListBox.modes ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource GrPrimary}" />
+    <Setter Property="Foreground" Value="White" />
+    <Setter Property="BorderBrush" Value="{DynamicResource GrPrimaryDark}" />
+  </Style>
+  <Style Selector="ListBox.modes ListBoxItem:selected:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource GrPrimaryDark}" />
+    <Setter Property="Foreground" Value="White" />
+  </Style>
+
+  <!-- Sel kalender -->
+  <Style Selector="Button.day">
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="Margin" Value="2" />
+    <Setter Property="Height" Value="58" />
+    <Setter Property="CornerRadius" Value="12" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="Foreground" Value="{DynamicResource GrText}" />
+    <Setter Property="BorderThickness" Value="2" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+  </Style>
+  <Style Selector="Button.day.today /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="BorderBrush" Value="{DynamicResource GrAccent}" />
+  </Style>
+  <Style Selector="Button.day.sel /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="BorderBrush" Value="{DynamicResource GrPrimaryDark}" />
+    <Setter Property="BorderThickness" Value="3" />
+  </Style>
+  <Style Selector="Button.day.sel:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="BorderBrush" Value="{DynamicResource GrPrimaryDark}" />
+    <Setter Property="BorderThickness" Value="3" />
+  </Style>
+</Styles>

@@ -1,0 +1,84 @@
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:c="using:GreenRide.UI.Controls" x:Class="GreenRide.UI.Views.DashboardView">
+  <ScrollViewer>
+    <StackPanel Margin="20" Spacing="16">
+
+      <StackPanel>
+        <TextBlock Text="{Binding Greeting}" Classes="h1" TextWrapping="Wrap" />
+        <TextBlock Text="Ringkasan jejak hijau kamu" Classes="muted" />
+      </StackPanel>
+
+      <!-- Wide: 2 kolom · Narrow: 1 kolom (Columns diatur dari ShellView) -->
+      <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto">
+
+        <!-- Kolom kiri: badge aktif + poin -->
+        <StackPanel Spacing="16" Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="{Binding Span}" Margin="{Binding FirstMargin}">
+          <Border Classes="hero">
+            <StackPanel Spacing="12" HorizontalAlignment="Stretch">
+              <Border Width="156" Height="156" CornerRadius="78" Background="White" HorizontalAlignment="Center">
+                <c:BadgeIcon Kind="{Binding CurrentBadge.IconKind}" Width="84" Height="104"
+                             HorizontalAlignment="Center" VerticalAlignment="Center" />
+              </Border>
+              <TextBlock Text="{Binding CurrentBadge.Title}" Foreground="White" FontSize="24" FontWeight="ExtraBold" HorizontalAlignment="Center" />
+              <TextBlock Text="{Binding CurrentBadge.Subtitle}" Foreground="#E8F5E9" HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center" />
+              <Grid ColumnDefinitions="*,*,*" Margin="0,8,0,0">
+                <StackPanel Grid.Column="0" HorizontalAlignment="Center">
+                  <TextBlock Text="{Binding TotalPoin}" Foreground="White" FontSize="26" FontWeight="ExtraBold" HorizontalAlignment="Center" />
+                  <TextBlock Text="Poin hijau" Foreground="#C8E6C9" FontSize="12" HorizontalAlignment="Center" />
+                </StackPanel>
+                <StackPanel Grid.Column="1" HorizontalAlignment="Center">
+                  <TextBlock Text="{Binding WeekEmissionText}" Foreground="White" FontSize="26" FontWeight="ExtraBold" HorizontalAlignment="Center" />
+                  <TextBlock Text="Emisi minggu ini" Foreground="#C8E6C9" FontSize="12" HorizontalAlignment="Center" />
+                </StackPanel>
+                <StackPanel Grid.Column="2" HorizontalAlignment="Center">
+                  <TextBlock Text="{Binding AvoidedText}" Foreground="White" FontSize="26" FontWeight="ExtraBold" HorizontalAlignment="Center" />
+                  <TextBlock Text="Emisi dihindari" Foreground="#C8E6C9" FontSize="12" HorizontalAlignment="Center" />
+                </StackPanel>
+              </Grid>
+            </StackPanel>
+          </Border>
+
+          <Border Classes="card">
+            <StackPanel Spacing="6">
+              <TextBlock Text="🎯 Target minggu ini" Classes="h2" />
+              <TextBlock Text="{Binding ProgressText}" TextWrapping="Wrap" />
+            </StackPanel>
+          </Border>
+        </StackPanel>
+
+        <!-- Kolom kanan: koleksi badge + perjalanan hari ini -->
+        <StackPanel Spacing="16" Grid.Row="{Binding SecondRow}" Grid.Column="{Binding SecondColumn}" Grid.ColumnSpan="{Binding Span}" Margin="{Binding SecondMargin}">
+          <Border Classes="card">
+            <StackPanel Spacing="12">
+              <TextBlock Text="🏅 Koleksi Badge" Classes="h2" />
+              <ItemsControl ItemsSource="{Binding Badges}">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate><UniformGrid Rows="1" /></ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <StackPanel Spacing="6" Margin="4">
+                      <c:BadgeIcon Kind="{Binding IconKind}" Width="62" Height="76" HorizontalAlignment="Center" />
+                      <TextBlock Text="{Binding Title}" FontWeight="Bold" FontSize="13" TextAlignment="Center" TextWrapping="Wrap" HorizontalAlignment="Center" />
+                      <TextBlock Text="{Binding Subtitle}" Classes="muted" FontSize="11" TextAlignment="Center" TextWrapping="Wrap" HorizontalAlignment="Center" />
+                    </StackPanel>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+          </Border>
+
+          <Border Classes="card">
+            <StackPanel Spacing="8">
+              <TextBlock Text="🗓️ Perjalanan Hari Ini" Classes="h2" />
+              <TextBlock Text="Belum ada perjalanan hari ini." Classes="muted" IsVisible="{Binding !HasTodayLogs}" />
+              <ItemsControl ItemsSource="{Binding TodayLogs}" ItemTemplate="{DynamicResource LogRowTemplate}" />
+              <Button Classes="primary" Content="➕  Catat Perjalanan" Command="{Binding CatatSekarangCommand}"
+                      HorizontalAlignment="Stretch" Margin="0,8,0,0" />
+            </StackPanel>
+          </Border>
+        </StackPanel>
+
+      </Grid>
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

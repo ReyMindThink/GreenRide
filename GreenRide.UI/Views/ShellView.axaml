@@ -1,0 +1,65 @@
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:c="using:GreenRide.UI.Controls" x:Class="GreenRide.UI.Views.ShellView">
+  <Grid ColumnDefinitions="Auto,*" RowDefinitions="*,Auto">
+
+    <!-- Navigasi samping (jendela lebar) -->
+    <Border Grid.Row="0" Grid.RowSpan="2" Grid.Column="0" Width="240"
+            Background="{DynamicResource GrPrimaryDark}" IsVisible="{Binding IsWide}">
+      <DockPanel Margin="16">
+        <Button DockPanel.Dock="Bottom" Classes="sidenav" Command="{Binding KeluarCommand}">
+          <StackPanel Orientation="Horizontal" Spacing="12">
+            <TextBlock Text="🚪" FontSize="20" />
+            <TextBlock Text="Keluar" VerticalAlignment="Center" />
+          </StackPanel>
+        </Button>
+        <StackPanel Spacing="6">
+          <StackPanel Orientation="Horizontal" Spacing="12" Margin="4,8,0,22">
+            <Border Background="White" CornerRadius="24" Width="48" Height="48">
+              <c:LogoMark Width="40" Height="40" HorizontalAlignment="Center" VerticalAlignment="Center" />
+            </Border>
+            <StackPanel VerticalAlignment="Center">
+              <TextBlock Text="GreenRide" Foreground="White" FontWeight="ExtraBold" FontSize="20" />
+              <TextBlock Text="{Binding Account.Nama}" Foreground="#C8E6C9" FontSize="12" />
+            </StackPanel>
+          </StackPanel>
+          <ItemsControl ItemsSource="{Binding NavItems}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <Button Classes="sidenav" Classes.active="{Binding IsSelected}" Command="{Binding SelectCommand}" Margin="0,2">
+                  <StackPanel Orientation="Horizontal" Spacing="12">
+                    <TextBlock Text="{Binding Emoji}" FontSize="20" />
+                    <TextBlock Text="{Binding Title}" VerticalAlignment="Center" />
+                  </StackPanel>
+                </Button>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+      </DockPanel>
+    </Border>
+
+    <!-- Halaman aktif -->
+    <ContentControl Grid.Row="0" Grid.Column="1" Content="{Binding CurrentPage}"
+                    HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" />
+
+    <!-- Navigasi bawah (jendela sempit / ukuran HP) -->
+    <Border Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Background="White"
+            BorderBrush="{DynamicResource GrMint}" BorderThickness="0,1,0,0" Padding="8,6"
+            IsVisible="{Binding !IsWide}">
+      <ItemsControl ItemsSource="{Binding NavItems}">
+        <ItemsControl.ItemsPanel>
+          <ItemsPanelTemplate><UniformGrid Rows="1" /></ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate>
+          <DataTemplate>
+            <Button Classes="bottomnav" Classes.active="{Binding IsSelected}" Command="{Binding SelectCommand}" Margin="3,0">
+              <StackPanel Spacing="2">
+                <TextBlock Text="{Binding Emoji}" FontSize="22" HorizontalAlignment="Center" />
+                <TextBlock Text="{Binding Title}" HorizontalAlignment="Center" />
+              </StackPanel>
+            </Button>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </Border>
+  </Grid>
+</UserControl>

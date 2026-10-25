@@ -1,0 +1,15 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="GreenRide.UI.Controls.LogoMark">
+  <!-- Logo GreenRide: lingkaran hijau + daun + jalan (kanvas 112x112) -->
+  <Viewbox Stretch="Uniform">
+    <Canvas Width="112" Height="112">
+      <Ellipse Width="112" Height="112" Fill="#2E7D32" />
+      <Canvas RenderTransform="translate(-284px,-49px)">
+        <Path Data="M 315 128 C 311 92, 335 68, 366 64 C 369 96, 350 124, 315 128 Z" Fill="#A5D6A7" />
+        <Path Data="M 315 128 L 360 74" Stroke="#2E7D32" StrokeThickness="2.5" StrokeLineCap="Round" />
+        <Path Data="M 292 134 Q 340 114 388 134" Stroke="White" StrokeThickness="5" StrokeLineCap="Round" />
+      </Canvas>
+    </Canvas>
+  </Viewbox>
+</UserControl>

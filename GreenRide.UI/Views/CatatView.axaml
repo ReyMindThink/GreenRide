@@ -1,0 +1,76 @@
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:c="using:GreenRide.UI.Controls" x:Class="GreenRide.UI.Views.CatatView">
+  <ScrollViewer>
+    <StackPanel Margin="20" Spacing="16">
+
+      <StackPanel>
+        <TextBlock Text="Catat Perjalanan" Classes="h1" />
+        <TextBlock Text="Pilih moda transportasi yang kamu pakai" Classes="muted" />
+      </StackPanel>
+
+      <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto">
+
+        <StackPanel Spacing="16" Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="{Binding Span}" Margin="{Binding FirstMargin}">
+          <Border Classes="card">
+            <StackPanel Spacing="10">
+              <TextBlock Text="Pilihan Moda Transportasi" Classes="h2" />
+              <ListBox Classes="modes" ItemsSource="{Binding Modes}" SelectedItem="{Binding SelectedMode}"
+                       ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                       ScrollViewer.VerticalScrollBarVisibility="Disabled">
+                <ListBox.ItemsPanel>
+                  <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                </ListBox.ItemsPanel>
+                <ListBox.ItemTemplate>
+                  <DataTemplate>
+                    <StackPanel Spacing="4" HorizontalAlignment="Center" VerticalAlignment="Center">
+                      <TextBlock Text="{Binding Emoji}" FontSize="40" HorizontalAlignment="Center" />
+                      <TextBlock Text="{Binding Nama}" FontWeight="Bold" HorizontalAlignment="Center" />
+                      <TextBlock Text="{Binding FaktorText}" FontSize="11" Opacity="0.8" HorizontalAlignment="Center" />
+                    </StackPanel>
+                  </DataTemplate>
+                </ListBox.ItemTemplate>
+              </ListBox>
+            </StackPanel>
+          </Border>
+
+          <Border Classes="card">
+            <StackPanel Spacing="12">
+              <TextBlock Text="Durasi &amp; Tanggal" Classes="h2" />
+              <TextBlock Text="Durasi (menit)" Classes="muted" />
+              <NumericUpDown Value="{Binding DurasiMenit}" Minimum="1" Maximum="600" Increment="5" FormatString="0" />
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <Button Classes="chip" Content="15" Command="{Binding SetDurasiCommand}" CommandParameter="15" />
+                <Button Classes="chip" Content="30" Command="{Binding SetDurasiCommand}" CommandParameter="30" />
+                <Button Classes="chip" Content="45" Command="{Binding SetDurasiCommand}" CommandParameter="45" />
+                <Button Classes="chip" Content="60" Command="{Binding SetDurasiCommand}" CommandParameter="60" />
+              </StackPanel>
+              <TextBlock Text="Tanggal perjalanan" Classes="muted" Margin="0,6,0,0" />
+              <CalendarDatePicker SelectedDate="{Binding Tanggal}" DisplayDateEnd="{Binding MaxTanggal}" HorizontalAlignment="Stretch" />
+            </StackPanel>
+          </Border>
+        </StackPanel>
+
+        <StackPanel Spacing="16" Grid.Row="{Binding SecondRow}" Grid.Column="{Binding SecondColumn}" Grid.ColumnSpan="{Binding Span}" Margin="{Binding SecondMargin}">
+          <Border Classes="hero">
+            <StackPanel Spacing="6">
+              <TextBlock Text="Estimasi emisi" Foreground="#C8E6C9" />
+              <TextBlock Text="{Binding PreviewText}" Foreground="White" FontSize="30" FontWeight="ExtraBold" TextWrapping="Wrap" />
+              <TextBlock Text="{Binding CompareText}" Foreground="#E8F5E9" TextWrapping="Wrap" />
+            </StackPanel>
+          </Border>
+
+          <Button Classes="primary" Content="💾  Simpan Perjalanan" Command="{Binding SimpanCommand}" HorizontalAlignment="Stretch" />
+          <TextBlock Text="{Binding StatusMessage}" Foreground="{DynamicResource GrPrimaryDark}" FontWeight="SemiBold" TextWrapping="Wrap"
+                     IsVisible="{Binding StatusMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+
+          <Border Classes="card">
+            <StackPanel Spacing="8">
+              <TextBlock Text="Perjalanan Terbaru" Classes="h2" />
+              <ItemsControl ItemsSource="{Binding RecentLogs}" ItemTemplate="{DynamicResource LogRowTemplate}" />
+            </StackPanel>
+          </Border>
+        </StackPanel>
+
+      </Grid>
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

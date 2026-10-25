@@ -1,0 +1,17 @@
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:c="using:GreenRide.UI.Controls" x:Class="GreenRide.UI.Views.RegisterView">
+  <ScrollViewer>
+    <Border Classes="card" MaxWidth="440" Margin="24" VerticalAlignment="Center" HorizontalAlignment="Stretch" Padding="26">
+      <StackPanel Spacing="12">
+        <c:LogoMark Width="84" Height="84" HorizontalAlignment="Center" />
+        <TextBlock Text="Daftar Akun" Classes="h1" HorizontalAlignment="Center" />
+        <TextBox Text="{Binding Nama}" Watermark="nama lengkap" />
+        <TextBox Text="{Binding Email}" Watermark="email" />
+        <TextBox Text="{Binding Password}" Watermark="password (min. 6 karakter)" PasswordChar="●" />
+        <TextBox Text="{Binding Konfirmasi}" Watermark="ulangi password" PasswordChar="●" />
+        <TextBlock Text="{Binding Error}" Classes="error" TextWrapping="Wrap" IsVisible="{Binding Error, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+        <Button Classes="primary" Content="Daftar" Command="{Binding DaftarCommand}" HorizontalAlignment="Stretch" Margin="0,6,0,0" />
+        <Button Classes="ghost" Content="Sudah punya akun? Login" Command="{Binding KeLoginCommand}" HorizontalAlignment="Center" />
+      </StackPanel>
+    </Border>
+  </ScrollViewer>
+</UserControl>

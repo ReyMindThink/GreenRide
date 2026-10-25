@@ -1,0 +1,12 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="GreenRide.UI.Views.MainWindow"
+        Title="GreenRide"
+        Width="1100" Height="740" MinWidth="340" MinHeight="560"
+        WindowStartupLocation="CenterScreen"
+        Background="{DynamicResource GrBackground}"
+        Foreground="{DynamicResource GrText}">
+  <ContentControl Content="{Binding CurrentViewModel}"
+                  HorizontalContentAlignment="Stretch"
+                  VerticalContentAlignment="Stretch" />
+</Window>

@@ -1,0 +1,59 @@
+is_global = true
+build_property.AvaloniaNameGeneratorIsEnabled = true
+build_property.AvaloniaNameGeneratorBehavior = InitializeComponent
+build_property.AvaloniaNameGeneratorDefaultFieldModifier = internal
+build_property.AvaloniaNameGeneratorFilterByPath = *
+build_property.AvaloniaNameGeneratorFilterByNamespace = *
+build_property.AvaloniaNameGeneratorViewFileNamingStrategy = NamespaceAndClassName
+build_property.AvaloniaNameGeneratorAttachDevTools = true
+build_property.TargetFramework = net8.0
+build_property.TargetPlatformMinVersion = 
+build_property.UsingMicrosoftNETSdkWeb = 
+build_property.ProjectTypeGuids = 
+build_property.InvariantGlobalization = 
+build_property.PlatformNeutralAssembly = 
+build_property.EnforceExtendedAnalyzerRules = 
+build_property._SupportedPlatformList = Linux,macOS,Windows
+build_property.RootNamespace = GreenRide.UI
+build_property.ProjectDir = /Users/aqidatulizzah/Documents/GreenRide/GreenRide.UI/
+build_property.EnableComHosting = 
+build_property.EnableGeneratedComInterfaceComImportInterop = 
+
+[/Users/aqidatulizzah/Documents/GreenRide/GreenRide.UI/App.axaml]
+build_metadata.AdditionalFiles.SourceItemGroup = AvaloniaXaml
+
+[/Users/aqidatulizzah/Documents/GreenRide/GreenRide.UI/Controls/BadgeIcon.axaml]
+build_metadata.AdditionalFiles.SourceItemGroup = AvaloniaXaml
+
+[/Users/aqidatulizzah/Documents/GreenRide/GreenRide.UI/Controls/LogoMark.axaml]
+build_metadata.AdditionalFiles.SourceItemGroup = AvaloniaXaml
+
+[/Users/aqidatulizzah/Documents/GreenRide/GreenRide.UI/Styles/Theme.axaml]
+build_metadata.AdditionalFiles.SourceItemGroup = AvaloniaXaml
+
+[/Users/aqidatulizzah/Documents/GreenRide/GreenRide.UI/Views/CatatView.axaml]
+build_metadata.AdditionalFiles.SourceItemGroup = AvaloniaXaml
+
+[/Users/aqidatulizzah/Documents/GreenRide/GreenRide.UI/Views/DashboardView.axaml]
+build_metadata.AdditionalFiles.SourceItemGroup = AvaloniaXaml
+
+[/Users/aqidatulizzah/Documents/GreenRide/GreenRide.UI/Views/IntroView.axaml]
+build_metadata.AdditionalFiles.SourceItemGroup = AvaloniaXaml
+
+[/Users/aqidatulizzah/Documents/GreenRide/GreenRide.UI/Views/LoginView.axaml]
+build_metadata.AdditionalFiles.SourceItemGroup = AvaloniaXaml
+
+[/Users/aqidatulizzah/Documents/GreenRide/GreenRide.UI/Views/MainWindow.axaml]
+build_metadata.AdditionalFiles.SourceItemGroup = AvaloniaXaml
+
+[/Users/aqidatulizzah/Documents/GreenRide/GreenRide.UI/Views/RegisterView.axaml]
+build_metadata.AdditionalFiles.SourceItemGroup = AvaloniaXaml
+
+[/Users/aqidatulizzah/Documents/GreenRide/GreenRide.UI/Views/RingkasanView.axaml]
+build_metadata.AdditionalFiles.SourceItemGroup = AvaloniaXaml
+
+[/Users/aqidatulizzah/Documents/GreenRide/GreenRide.UI/Views/ShellView.axaml]
+build_metadata.AdditionalFiles.SourceItemGroup = AvaloniaXaml
+
+[/Users/aqidatulizzah/Documents/GreenRide/GreenRide.UI/Views/SplashView.axaml]
+build_metadata.AdditionalFiles.SourceItemGroup = AvaloniaXaml

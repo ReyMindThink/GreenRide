@@ -1,0 +1,40 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:GreenRide.UI.ViewModels"
+             xmlns:v="using:GreenRide.UI.Views"
+             x:Class="GreenRide.UI.App"
+             RequestedThemeVariant="Light">
+
+  <Application.DataTemplates>
+    <DataTemplate DataType="vm:SplashViewModel"><v:SplashView /></DataTemplate>
+    <DataTemplate DataType="vm:IntroViewModel"><v:IntroView /></DataTemplate>
+    <DataTemplate DataType="vm:LoginViewModel"><v:LoginView /></DataTemplate>
+    <DataTemplate DataType="vm:RegisterViewModel"><v:RegisterView /></DataTemplate>
+    <DataTemplate DataType="vm:ShellViewModel"><v:ShellView /></DataTemplate>
+    <DataTemplate DataType="vm:DashboardViewModel"><v:DashboardView /></DataTemplate>
+    <DataTemplate DataType="vm:CatatViewModel"><v:CatatView /></DataTemplate>
+    <DataTemplate DataType="vm:RingkasanViewModel"><v:RingkasanView /></DataTemplate>
+  </Application.DataTemplates>
+
+  <Application.Resources>
+    <!-- Baris perjalanan yang dipakai di Dashboard & Catat -->
+    <DataTemplate x:Key="LogRowTemplate">
+      <Border Background="#F1F8E9" CornerRadius="14" Padding="12" Margin="0,4">
+        <Grid ColumnDefinitions="Auto,*,Auto">
+          <TextBlock Text="{Binding Emoji}" FontSize="28" VerticalAlignment="Center" Margin="0,0,12,0" />
+          <StackPanel Grid.Column="1" VerticalAlignment="Center">
+            <TextBlock Text="{Binding ModaNama}" FontWeight="Bold" />
+            <TextBlock Classes="muted" Text="{Binding DetailText}" FontSize="12" />
+          </StackPanel>
+          <TextBlock Grid.Column="2" Text="{Binding EmisiText}" FontWeight="Bold"
+                     Foreground="{DynamicResource GrPrimary}" VerticalAlignment="Center" />
+        </Grid>
+      </Border>
+    </DataTemplate>
+  </Application.Resources>
+
+  <Application.Styles>
+    <FluentTheme />
+    <StyleInclude Source="avares://GreenRide.UI/Styles/Theme.axaml" />
+  </Application.Styles>
+</Application>
