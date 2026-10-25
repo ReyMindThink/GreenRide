@@ -1,0 +1,41 @@
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:c="using:GreenRide.UI.Controls" x:Class="GreenRide.UI.Views.IntroView">
+  <ScrollViewer>
+    <StackPanel MaxWidth="520" Margin="24,40" Spacing="18" VerticalAlignment="Center">
+      <c:LogoMark Width="110" Height="110" HorizontalAlignment="Center" />
+      <TextBlock Text="Selamat datang di GreenRide" Classes="h1" TextAlignment="Center" TextWrapping="Wrap" />
+      <TextBlock Text="Catat perjalananmu, kurangi emisi, dan kumpulkan badge hijau."
+                 Classes="muted" TextAlignment="Center" TextWrapping="Wrap" />
+
+      <Border Classes="card">
+        <Grid ColumnDefinitions="Auto,*">
+          <TextBlock Text="🚲" FontSize="34" Margin="0,0,16,0" VerticalAlignment="Center" />
+          <StackPanel Grid.Column="1">
+            <TextBlock Text="Catat setiap perjalanan" FontWeight="Bold" />
+            <TextBlock Text="Pilih moda dan durasi, emisi dihitung otomatis." Classes="muted" TextWrapping="Wrap" />
+          </StackPanel>
+        </Grid>
+      </Border>
+      <Border Classes="card">
+        <Grid ColumnDefinitions="Auto,*">
+          <TextBlock Text="📊" FontSize="34" Margin="0,0,16,0" VerticalAlignment="Center" />
+          <StackPanel Grid.Column="1">
+            <TextBlock Text="Pantau emisi mingguan" FontWeight="Bold" />
+            <TextBlock Text="Grafik dan kalender harian membantu kamu berkaca." Classes="muted" TextWrapping="Wrap" />
+          </StackPanel>
+        </Grid>
+      </Border>
+      <Border Classes="card">
+        <Grid ColumnDefinitions="Auto,*">
+          <TextBlock Text="🏅" FontSize="34" Margin="0,0,16,0" VerticalAlignment="Center" />
+          <StackPanel Grid.Column="1">
+            <TextBlock Text="Raih badge" FontWeight="Bold" />
+            <TextBlock Text="Hijau Pemula, Hemat Emisi, hingga Pahlawan Bumi." Classes="muted" TextWrapping="Wrap" />
+          </StackPanel>
+        </Grid>
+      </Border>
+
+      <Button Classes="primary" Content="Mulai" Command="{Binding MulaiCommand}"
+              HorizontalAlignment="Stretch" Margin="0,8,0,0" />
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

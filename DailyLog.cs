@@ -30,6 +30,17 @@ namespace GreenRide.Models
             TransportModeId = modaBaru.TransportModeId;
         }
 
+        // Mengganti durasi (menit) untuk log yang sudah tercatat dalam rentang 1 hari
+        public void RevisiDurasi(int durasiBaru)
+        {
+            if (durasiBaru <= 0)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(durasiBaru), "Durasi harus lebih dari 0 menit.");
+            }
+            Durasi = durasiBaru;
+        }
+
         // moda yang diberikan harus sesuai dengan TransportModeId milik log ini,
         // supaya class ini tidak perlu tahu cara mengambil data dari database sendiri.
         public double HitungEmisiHarian(TransportMode moda)

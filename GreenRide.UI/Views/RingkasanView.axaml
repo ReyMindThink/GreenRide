@@ -1,0 +1,150 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="using:GreenRide.UI.Controls"
+             xmlns:lvc="using:LiveChartsCore.SkiaSharpView.Avalonia"
+             x:Class="GreenRide.UI.Views.RingkasanView">
+  <ScrollViewer>
+    <StackPanel Margin="20" Spacing="16">
+
+      <StackPanel>
+        <TextBlock Text="Ringkasan" Classes="h1" />
+        <TextBlock Text="Emisi mingguan, kalender harian, dan revisi catatan" Classes="muted" />
+      </StackPanel>
+
+      <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto">
+
+        <!-- ===== Grafik emisi rekap mingguan ===== -->
+        <Border Classes="card" Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="{Binding Span}" Margin="{Binding FirstMargin}" VerticalAlignment="Top">
+          <StackPanel Spacing="8">
+            <Grid ColumnDefinitions="Auto,*,Auto">
+              <Button Grid.Column="0" Classes="chip" Content="◀" Command="{Binding PrevWeekCommand}" />
+              <StackPanel Grid.Column="1" HorizontalAlignment="Center">
+                <TextBlock Text="Emisi Mingguan" Classes="h2" HorizontalAlignment="Center" />
+                <TextBlock Text="{Binding WeekLabel}" Classes="muted" FontSize="12" HorizontalAlignment="Center" />
+              </StackPanel>
+              <Button Grid.Column="2" Classes="chip" Content="▶" Command="{Binding NextWeekCommand}" />
+            </Grid>
+
+            <lvc:CartesianChart Series="{Binding Series}" XAxes="{Binding XAxes}" YAxes="{Binding YAxes}" Height="230" />
+
+            <TextBlock Text="{Binding WeekTotalText}" Classes="big" HorizontalAlignment="Center" FontSize="26" />
+            <TextBlock Text="{Binding WeekBadgeText}" Classes="muted" HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center" />
+          </StackPanel>
+        </Border>
+
+        <!-- ===== Kalender detail harian ===== -->
+        <Border Classes="card" Grid.Row="{Binding SecondRow}" Grid.Column="{Binding SecondColumn}" Grid.ColumnSpan="{Binding Span}" Margin="{Binding SecondMargin}" VerticalAlignment="Top">
+          <StackPanel Spacing="8">
+            <Grid ColumnDefinitions="Auto,*,Auto">
+              <Button Grid.Column="0" Classes="chip" Content="◀" Command="{Binding PrevMonthCommand}" />
+              <TextBlock Grid.Column="1" Text="{Binding MonthLabel}" Classes="h2" HorizontalAlignment="Center" VerticalAlignment="Center" />
+              <Button Grid.Column="2" Classes="chip" Content="▶" Command="{Binding NextMonthCommand}" />
+            </Grid>
+
+            <ItemsControl ItemsSource="{Binding WeekdayNames}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate><UniformGrid Rows="1" /></ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <TextBlock Text="{Binding}" Classes="muted" FontWeight="Bold" FontSize="12" HorizontalAlignment="Center" />
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <ItemsControl ItemsSource="{Binding Days}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate><UniformGrid Columns="7" /></ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <Button Classes="day" Classes.sel="{Binding IsSelected}" Classes.today="{Binding IsToday}"
+                          Background="{Binding Fill}" Opacity="{Binding CellOpacity}"
+                          Command="{Binding $parent[ItemsControl].DataContext.SelectDayCommand}"
+                          CommandParameter="{Binding}">
+                    <StackPanel Spacing="0">
+                      <TextBlock Text="{Binding DayText}" FontWeight="Bold" FontSize="14" HorizontalAlignment="Center" />
+                      <TextBlock Text="{Binding Emojis}" FontSize="12" HorizontalAlignment="Center" MinHeight="16" />
+                    </StackPanel>
+                  </Button>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <WrapPanel HorizontalAlignment="Center">
+              <TextBlock Text="🟩 ≤ 0,5 kg" FontSize="11" Classes="muted" Margin="6,2" />
+              <TextBlock Text="🟨 ≤ 2 kg" FontSize="11" Classes="muted" Margin="6,2" />
+              <TextBlock Text="🟧 &gt; 2 kg" FontSize="11" Classes="muted" Margin="6,2" />
+            </WrapPanel>
+          </StackPanel>
+        </Border>
+
+      </Grid>
+
+      <!-- ===== Detail hari terpilih + revisi moda/durasi (rentang 1 hari) ===== -->
+      <Border Classes="card">
+        <StackPanel Spacing="10">
+          <TextBlock Text="{Binding DayTitle}" Classes="h2" />
+          <TextBlock Text="{Binding DayTotalText}" Classes="muted" />
+
+          <ItemsControl ItemsSource="{Binding SelectedLogs}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <Border Background="#F1F8E9" CornerRadius="14" Padding="12" Margin="0,4">
+                  <Grid ColumnDefinitions="Auto,*,Auto">
+                    <TextBlock Text="{Binding Emoji}" FontSize="28" VerticalAlignment="Center" Margin="0,0,12,0" />
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                      <TextBlock Text="{Binding ModaNama}" FontWeight="Bold" />
+                      <TextBlock Classes="muted" FontSize="12">
+                        <Run Text="{Binding Log.Durasi}" /><Run Text=" menit · " /><Run Text="{Binding EmisiText}" />
+                      </TextBlock>
+                    </StackPanel>
+                    <Button Grid.Column="2" Classes="chip" Content="✏️ Revisi" VerticalAlignment="Center"
+                            IsVisible="{Binding CanRevise}"
+                            Command="{Binding $parent[ItemsControl].DataContext.MulaiRevisiCommand}"
+                            CommandParameter="{Binding}" />
+                    <TextBlock Grid.Column="2" Text="🔒 Lewat 1 hari" Classes="muted" FontSize="12" VerticalAlignment="Center"
+                               IsVisible="{Binding !CanRevise}" />
+                  </Grid>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+
+          <!-- Panel revisi -->
+          <Border Background="#FFF8E1" BorderBrush="{DynamicResource GrAccent}" BorderThickness="2" CornerRadius="16" Padding="14"
+                  IsVisible="{Binding HasEditing}">
+            <StackPanel Spacing="10">
+              <TextBlock Text="✏️ Revisi Perjalanan (maks. 1 hari)" Classes="h2" />
+              <TextBlock Text="Pilih moda baru" Classes="muted" />
+              <ListBox Classes="modes" ItemsSource="{Binding RevisiModes}" SelectedItem="{Binding SelectedRevisiMode}"
+                       ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                       ScrollViewer.VerticalScrollBarVisibility="Disabled">
+                <ListBox.ItemsPanel>
+                  <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                </ListBox.ItemsPanel>
+                <ListBox.ItemTemplate>
+                  <DataTemplate>
+                    <StackPanel Spacing="4" HorizontalAlignment="Center" VerticalAlignment="Center">
+                      <TextBlock Text="{Binding Emoji}" FontSize="36" HorizontalAlignment="Center" />
+                      <TextBlock Text="{Binding Nama}" FontWeight="Bold" HorizontalAlignment="Center" />
+                    </StackPanel>
+                  </DataTemplate>
+                </ListBox.ItemTemplate>
+              </ListBox>
+              <TextBlock Text="Durasi baru (menit)" Classes="muted" />
+              <NumericUpDown Value="{Binding RevisiDurasi}" Minimum="1" Maximum="600" Increment="5" FormatString="0" />
+              <TextBlock Text="{Binding RevisiError}" Classes="error" TextWrapping="Wrap"
+                         IsVisible="{Binding RevisiError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+              <StackPanel Orientation="Horizontal" Spacing="10">
+                <Button Classes="primary" Content="Simpan Revisi" Command="{Binding SimpanRevisiCommand}" />
+                <Button Classes="ghost" Content="Batal" Command="{Binding BatalRevisiCommand}" />
+              </StackPanel>
+            </StackPanel>
+          </Border>
+        </StackPanel>
+      </Border>
+
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

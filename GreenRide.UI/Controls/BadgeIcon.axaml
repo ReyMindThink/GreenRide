@@ -1,0 +1,58 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="GreenRide.UI.Controls.BadgeIcon"
+             x:Name="Root">
+  <!--
+    Kind: Pemula | Hemat | Pahlawan | Locked (abu-abu = belum diraih).
+    Semua bentuk adalah vektor <Path Data="..."> (perisai 72x88).
+  -->
+  <Viewbox Stretch="Uniform">
+    <Grid Width="72" Height="88">
+
+      <!-- Hijau Pemula -->
+      <Canvas Width="72" Height="88"
+              IsVisible="{Binding #Root.Kind, Converter={x:Static ObjectConverters.Equal}, ConverterParameter=Pemula}">
+        <Canvas RenderTransform="translate(36px,-230px)">
+          <Path Fill="#66BB6A" Data="M -36 240 L 0 230 L 36 240 L 36 280 Q 36 305 0 318 Q -36 305 -36 280 Z" />
+          <Path Data="M 0 302 L 0 272" Stroke="White" StrokeThickness="4" StrokeLineCap="Round" />
+          <Path Fill="White" Data="M 0 284 C -16 284 -20 268 -20 268 C -6 266 0 274 0 284 Z" />
+          <Path Fill="White" Data="M 0 278 C 14 278 18 262 18 262 C 4 260 0 268 0 278 Z" />
+        </Canvas>
+      </Canvas>
+
+      <!-- Hemat Emisi -->
+      <Canvas Width="72" Height="88"
+              IsVisible="{Binding #Root.Kind, Converter={x:Static ObjectConverters.Equal}, ConverterParameter=Hemat}">
+        <Canvas RenderTransform="translate(36px,-230px)">
+          <Path Fill="#2E7D32" Data="M -36 240 L 0 230 L 36 240 L 36 280 Q 36 305 0 318 Q -36 305 -36 280 Z" />
+          <Path Data="M 0 252 L 0 292" Stroke="White" StrokeThickness="5" StrokeLineCap="Round" />
+          <Path Data="M -13 279 L 0 292 L 13 279" Stroke="White" StrokeThickness="5"
+                StrokeLineCap="Round" StrokeJoin="Round" />
+        </Canvas>
+      </Canvas>
+
+      <!-- Pahlawan Bumi -->
+      <Canvas Width="72" Height="88"
+              IsVisible="{Binding #Root.Kind, Converter={x:Static ObjectConverters.Equal}, ConverterParameter=Pahlawan}">
+        <Canvas RenderTransform="translate(36px,-230px)">
+          <Path Fill="#F9A825" Data="M -36 240 L 0 230 L 36 240 L 36 280 Q 36 305 0 318 Q -36 305 -36 280 Z" />
+          <Polygon Fill="White" Points="0,238 3.5,245 11,246 5.5,251 7,258 0,254.5 -7,258 -5.5,251 -11,246 -3.5,245" />
+          <Ellipse Canvas.Left="-15" Canvas.Top="273" Width="30" Height="30" Fill="#1B5E20" />
+          <Path Fill="#A5D6A7" Data="M -7 281 C -2 276 6 278 8 283 C 4 287 1 285 -3 291 C -7 289 -9 285 -7 281 Z" />
+        </Canvas>
+      </Canvas>
+
+      <!-- Belum diraih (abu-abu) -->
+      <Canvas Width="72" Height="88"
+              IsVisible="{Binding #Root.Kind, Converter={x:Static ObjectConverters.Equal}, ConverterParameter=Locked}">
+        <Canvas RenderTransform="translate(36px,-230px)">
+          <Path Fill="#B0BEC5" Data="M -36 240 L 0 230 L 36 240 L 36 280 Q 36 305 0 318 Q -36 305 -36 280 Z" />
+          <Path Data="M 0 302 L 0 272" Stroke="#ECEFF1" StrokeThickness="4" StrokeLineCap="Round" />
+          <Path Fill="#ECEFF1" Data="M 0 284 C -16 284 -20 268 -20 268 C -6 266 0 274 0 284 Z" />
+          <Path Fill="#ECEFF1" Data="M 0 278 C 14 278 18 262 18 262 C 4 260 0 268 0 278 Z" />
+        </Canvas>
+      </Canvas>
+
+    </Grid>
+  </Viewbox>
+</UserControl>

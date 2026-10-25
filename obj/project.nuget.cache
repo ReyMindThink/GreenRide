@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "dgSpecHash": "qth26p5gp4I=",
+  "success": true,
+  "projectFilePath": "/Users/aqidatulizzah/Documents/GreenRide/GreenRide.csproj",
+  "expectedPackageFiles": [
+    "/Users/aqidatulizzah/.nuget/packages/bcrypt.net-next/4.2.0/bcrypt.net-next.4.2.0.nupkg.sha512"
+  ],
+  "logs": []
+}
