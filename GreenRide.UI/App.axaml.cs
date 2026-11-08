@@ -16,7 +16,7 @@ public partial class App : Application
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             // Ganti InMemoryGreenRideRepository dengan implementasi PostgreSQL/MongoDB nanti.
-            IGreenRideRepository repo = new InMemoryGreenRideRepository();
+            IGreenRideRepository repo = new PostgresGreenRideRepository();
             desktop.MainWindow = new MainWindow { DataContext = new MainViewModel(repo) };
         }
         base.OnFrameworkInitializationCompleted();
