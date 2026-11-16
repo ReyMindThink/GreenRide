@@ -42,5 +42,16 @@ namespace GreenRide.Models
         {
             TransportModeId = id;
         }
+
+        // public method: menghitung emisi satu perjalanan (kg CO2) = durasi x faktor emisi
+        // Memakai field private _faktorEmisi secara langsung (boleh, karena masih di dalam class ini)
+        public double HitungEmisi(int durasiMenit)
+        {
+            if (durasiMenit <= 0)
+                throw new ArgumentOutOfRangeException(
+                    nameof(durasiMenit), "Durasi harus lebih dari 0 menit.");
+
+            return durasiMenit * _faktorEmisi;
+        }
     }
 }
