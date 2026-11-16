@@ -134,6 +134,10 @@
             "LiveChartsCore.SkiaSharpView.Avalonia": {
               "target": "Package",
               "version": "[2.0.0-rc5.4, )"
+            },
+            "Npgsql": {
+              "target": "Package",
+              "version": "[10.0.3, )"
             }
           },
           "imports": [

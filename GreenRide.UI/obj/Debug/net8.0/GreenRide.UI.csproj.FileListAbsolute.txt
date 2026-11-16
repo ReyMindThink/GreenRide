@@ -73,3 +73,7 @@
 /Users/aqidatulizzah/Documents/GreenRide/GreenRide.UI/obj/Debug/net8.0/GreenRid.326D4537.Up2Date
 /Users/aqidatulizzah/Documents/GreenRide/GreenRide.UI/obj/Debug/net8.0/GreenRide.UI.genruntimeconfig.cache
 /Users/aqidatulizzah/Documents/GreenRide/GreenRide.UI/obj/Debug/net8.0/ref/GreenRide.UI.dll
+/Users/aqidatulizzah/Documents/GreenRide/GreenRide.UI/bin/Debug/net8.0/Microsoft.Extensions.DependencyInjection.Abstractions.dll
+/Users/aqidatulizzah/Documents/GreenRide/GreenRide.UI/bin/Debug/net8.0/Microsoft.Extensions.Logging.Abstractions.dll
+/Users/aqidatulizzah/Documents/GreenRide/GreenRide.UI/bin/Debug/net8.0/Npgsql.dll
+/Users/aqidatulizzah/Documents/GreenRide/GreenRide.UI/bin/Debug/net8.0/System.Diagnostics.DiagnosticSource.dll

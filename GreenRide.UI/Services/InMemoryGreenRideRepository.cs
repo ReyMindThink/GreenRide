@@ -7,11 +7,11 @@ public sealed class InMemoryGreenRideRepository : IGreenRideRepository
 {
     private readonly List<TransportMode> _modes = new()
     {
-        new TransportMode(1, "Jalan Kaki", 0.00),
-        new TransportMode(2, "Sepeda",     0.00),
-        new TransportMode(3, "Bus",        0.03),
-        new TransportMode(4, "Motor",      0.06),
-        new TransportMode(5, "Mobil",      0.10),
+        new TanpaEmisi(1, "Jalan Kaki"),
+        new TanpaEmisi(2, "Sepeda"),
+        new KendaraanUmum(3, "Bus",   0.60),   // lihat catatan di bawah
+        new KendaraanPribadi(4, "Motor", 0.06),
+        new KendaraanPribadi(5, "Mobil", 0.10),
     };
 
     private readonly List<AccountInfo> _accounts = new()
@@ -29,7 +29,7 @@ public sealed class InMemoryGreenRideRepository : IGreenRideRepository
     {
         // 14 hari terakhir untuk akun demo → minggu lalu ≈ 9,2 kg (Hijau Pemula)
         int[] modeIds = { 2, 3, 4, 1, 5, 3, 4, 5, 4, 2, 3, 5, 1, 4 };
-        int[] durasi  = { 25, 30, 20, 15, 25, 40, 30, 30, 25, 35, 20, 28, 18, 22 };
+        int[] durasi = { 25, 30, 20, 15, 25, 40, 30, 30, 25, 35, 20, 28, 18, 22 };
         for (int i = 0; i < modeIds.Length; i++)
             AddLog(new DailyLog(1, DateTime.Today.AddDays(-i), durasi[i], modeIds[i]));
     }

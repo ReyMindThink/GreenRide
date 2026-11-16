@@ -49,14 +49,14 @@ public partial class CatatViewModel : PageViewModelBase
     public string PreviewText =>
         SelectedMode is null || DurasiMenit is not { } d || d <= 0
             ? "Pilih moda & durasi"
-            : Fmt.Kg((double)d * SelectedMode.Mode.FaktorEmisi);
+            : Fmt.Kg(SelectedMode.Mode.HitungEmisi((int)d));
 
     public string CompareText
     {
         get
         {
             if (SelectedMode is null || DurasiMenit is not { } d || d <= 0) return "Estimasi emisi akan tampil di sini.";
-            var hemat = (double)d * (ModeCatalog.FaktorAcuanMobil - SelectedMode.Mode.FaktorEmisi);
+            var hemat = ModeCatalog.FaktorAcuanMobil * (double)d - SelectedMode.Mode.HitungEmisi((int)d);
             return hemat > 0
                 ? $"🌱 Hemat {Fmt.Kg(hemat)} dibanding naik mobil"
                 : "Sama dengan emisi mobil. Coba moda lain untuk perjalanan berikutnya!";
@@ -75,7 +75,16 @@ public partial class CatatViewModel : PageViewModelBase
     private void Simpan()
     {
         var mode = SelectedMode!.Mode;
-        var log = new DailyLog(_account.UserId, Tanggal!.Value.Date, (int)DurasiMenit!.Value, mode.TransportModeId);
+        DailyLog log;
+        try
+        {
+            log = new DailyLog(_account.UserId, Tanggal!.Value.Date, (int)DurasiMenit!.Value, mode.TransportModeId);
+        }
+        catch (InvalidOperationException ex)
+        {
+            StatusMessage = "⚠️ " + ex.Message;
+            return;
+        }
         _repo.AddLog(log);
 
         StatusMessage = $"✅ Tersimpan: {SelectedMode.Emoji} {SelectedMode.Nama}, {log.Durasi} menit ({Fmt.Kg(log.HitungEmisiHarian(mode))})";

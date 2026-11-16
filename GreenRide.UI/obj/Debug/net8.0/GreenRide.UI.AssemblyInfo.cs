@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("GreenRide.UI")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+47e755cf28cba4be0c6a538f289bcfc2220a6242")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+a190acca059a731801996efd9fa9646b6acefcf7")]
 [assembly: System.Reflection.AssemblyProductAttribute("GreenRide.UI")]
 [assembly: System.Reflection.AssemblyTitleAttribute("GreenRide.UI")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
