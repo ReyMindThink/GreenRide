@@ -32,7 +32,7 @@ public sealed class GamificationService
         var map = ModeMap();
         return _repo.GetLogs(userId, DateTime.Today.AddYears(-2), DateTime.Today)
             .Sum(l => map.TryGetValue(l.TransportModeId, out var m)
-                ? Math.Max(0, ModeCatalog.FaktorAcuanMobil - m.FaktorEmisi) * l.Durasi
+                ? Math.Max(0, ModeCatalog.FaktorAcuanMobil * l.Durasi - m.HitungEmisi(l.Durasi))
                 : 0);
     }
 

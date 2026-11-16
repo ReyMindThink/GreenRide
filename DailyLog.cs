@@ -7,7 +7,22 @@ namespace GreenRide.Models
         public int DailyLogId { get; private set; }
         public int UserId { get; private set; }
         public DateTime Tanggal { get; private set; }
-        public int Durasi { get; private set; } // dalam menit
+        
+        private const int MaxDurasiMenit = 1440;
+        private int _durasi;
+
+        public int Durasi // dalam menit
+        {
+            get { return _durasi; }
+            private set
+            {
+                if (value <= 0)
+                    throw new InvalidOperationException("Durasi harus lebih dari 0 menit.");
+                if (value > MaxDurasiMenit)
+                    throw new InvalidOperationException("Durasi tidak boleh lebih dari 1440 menit.");
+                _durasi = value;
+            }
+        }
         public int TransportModeId { get; private set; }
 
         public DailyLog(int userId, DateTime tanggal, int durasi, int transportModeId)
@@ -33,11 +48,6 @@ namespace GreenRide.Models
         // Mengganti durasi (menit) untuk log yang sudah tercatat dalam rentang 1 hari
         public void RevisiDurasi(int durasiBaru)
         {
-            if (durasiBaru <= 0)
-            {
-                throw new ArgumentOutOfRangeException(
-                    nameof(durasiBaru), "Durasi harus lebih dari 0 menit.");
-            }
             Durasi = durasiBaru;
         }
 
@@ -51,7 +61,7 @@ namespace GreenRide.Models
                     "TransportMode yang diberikan tidak sesuai dengan moda pada log ini.");
             }
 
-            return Durasi * moda.FaktorEmisi;
+            return moda.HitungEmisi(Durasi);
         }
     }
 }

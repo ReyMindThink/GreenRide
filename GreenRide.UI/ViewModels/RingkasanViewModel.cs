@@ -207,9 +207,17 @@ public partial class RingkasanViewModel : PageViewModelBase
         if (SelectedRevisiMode is null) { RevisiError = "Pilih moda terlebih dahulu."; return; }
         if (RevisiDurasi is not { } d || d <= 0) { RevisiError = "Durasi harus lebih dari 0 menit."; return; }
 
-        Editing.Log.RevisiModa(SelectedRevisiMode.Mode);
-        Editing.Log.RevisiDurasi((int)d);   // method baru di DailyLog (lihat patches/DailyLog.RevisiDurasi.txt)
-        _repo.UpdateLog(Editing.Log);
+        try
+{
+    Editing.Log.RevisiDurasi((int)d);
+    Editing.Log.RevisiModa(SelectedRevisiMode.Mode);
+}
+catch (InvalidOperationException ex)
+{
+    RevisiError = ex.Message;
+    return;
+}
+_repo.UpdateLog(Editing.Log);
 
         Reload();
     }
