@@ -17,26 +17,29 @@ public partial class ShellViewModel : ViewModelBase
     public ObservableCollection<NavItem> NavItems { get; }
 
     [ObservableProperty] private PageViewModelBase _currentPage;
-
-    /// <summary>Diisi ShellView berdasarkan lebar jendela: true → navigasi samping + 2 kolom.</summary>
     [ObservableProperty] private bool _isWide;
 
     public ShellViewModel(IGreenRideRepository repo, AccountInfo account, Action onLogout)
     {
-        Account = account;
+        Account   = account;
         _onLogout = onLogout;
 
-        var gami = new GamificationService(repo);
+        var gami  = new GamificationService(repo);
         Dashboard = new DashboardViewModel(repo, gami, account);
-        Catat = new CatatViewModel(repo, gami, account);
+        Catat     = new CatatViewModel(repo, account);        // gami tidak dibutuhkan di Catat
         Ringkasan = new RingkasanViewModel(repo, gami, account);
         Dashboard.RequestCatat = () => Select(NavItems[1]);
+        Ringkasan.RequestRevisi = item =>
+        {
+            var hariItu = repo.GetTripLogs(account.UserId, item.Log.Tanggal, item.Log.Tanggal);
+            CurrentPage = new RevisiViewModel(repo, item, hariItu, () => Select(NavItems[2]));
+        };
 
         NavItems = new ObservableCollection<NavItem>
         {
-            new("Beranda",   "🏠", Dashboard, Select),
-            new("Catat",     "➕", Catat,     Select),
-            new("Ringkasan", "📊", Ringkasan, Select),
+            new("Beranda",   "Beranda", Dashboard, Select),
+            new("Catat",     "Catat",   Catat,     Select),
+            new("Ringkasan", "Ringkasan", Ringkasan, Select),
         };
 
         _currentPage = Dashboard;
@@ -53,7 +56,7 @@ public partial class ShellViewModel : ViewModelBase
     partial void OnIsWideChanged(bool value)
     {
         Dashboard.IsWide = value;
-        Catat.IsWide = value;
+        Catat.IsWide     = value;
         Ringkasan.IsWide = value;
     }
 

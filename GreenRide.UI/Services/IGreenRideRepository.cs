@@ -13,6 +13,7 @@ public interface IGreenRideRepository
     TripLog CompleteTrip(Guid tripId, decimal faktorEmisi);
     IReadOnlyList<TripLog> GetTripLogs(Guid userId, DateOnly from, DateOnly to);
     void UpdateTripLog(Guid tripId, int modaIdBaru, decimal faktorEmisiBaru);
+    Task<TripLog?> UpdateTripLog(Guid tripId, DateTime waktuMulai, DateTime waktuSelesai);
     WeeklyBadge? GetPreviousWeekBadge(Guid userId);
     IReadOnlyList<WeeklyBadge> GetAllWeeklyBadges(Guid userId);
     void AddWeeklyBadge(WeeklyBadge badge);
