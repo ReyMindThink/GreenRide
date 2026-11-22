@@ -44,7 +44,9 @@ public partial class App : Application
         sc.AddSingleton<ITripService>(p => p.GetRequiredService<PostgresGreenRideRepository>());
         sc.AddSingleton<IEmissionService>(p => p.GetRequiredService<PostgresGreenRideRepository>());
         sc.AddSingleton<IBadgeProgressService>(p => p.GetRequiredService<PostgresGreenRideRepository>());
-        sc.AddSingleton<ILeaderboardService>(p => p.GetRequiredService<PostgresGreenRideRepository>());
+        // Leaderboard lewat REST API Supabase; bila gagal/tidak dikonfigurasi, memakai repository (Npgsql).
+        sc.AddSingleton<ILeaderboardService>(p => new LeaderboardApiService(
+            p.GetRequiredService<PostgresGreenRideRepository>(), p.GetRequiredService<IClock>()));
 
         // ViewModel
         sc.AddSingleton<MainViewModel>();
