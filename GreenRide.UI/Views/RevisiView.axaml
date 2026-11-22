@@ -1,0 +1,32 @@
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Class="GreenRide.UI.Views.RevisiView">
+  <ScrollViewer>
+    <StackPanel Margin="20" Spacing="16" MaxWidth="480" HorizontalAlignment="Left">
+
+      <StackPanel>
+        <TextBlock Text="Revisi Perjalanan" Classes="h1" />
+        <TextBlock Classes="muted">
+          <Run Text="{Binding ModaNama}" /><Run Text=" · " /><Run Text="{Binding TanggalText}" />
+        </TextBlock>
+      </StackPanel>
+
+      <Border Classes="card">
+        <StackPanel Spacing="12">
+          <TextBlock Text="Waktu mulai (HH:mm)" Classes="muted" />
+          <TextBox Text="{Binding WaktuMulaiText}" Watermark="07:30" MaxLength="5" />
+
+          <TextBlock Text="Waktu selesai (HH:mm)" Classes="muted" />
+          <TextBox Text="{Binding WaktuSelesaiText}" Watermark="08:00" MaxLength="5" />
+
+          <TextBlock Text="{Binding ErrorMessage}" Classes="error" TextWrapping="Wrap"
+                     IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+
+          <StackPanel Orientation="Horizontal" Spacing="10">
+            <Button Classes="primary" Content="Simpan" Command="{Binding SimpanRevisiCommand}" />
+            <Button Classes="ghost" Content="Batal" Command="{Binding BatalCommand}" />
+          </StackPanel>
+        </StackPanel>
+      </Border>
+
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

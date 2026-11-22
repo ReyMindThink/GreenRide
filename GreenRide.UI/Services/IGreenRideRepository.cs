@@ -3,25 +3,20 @@ using GreenRide.UI.Models;
 
 namespace GreenRide.UI.Services;
 
-/// <summary>
-/// Batas antara UI dan penyimpanan data. Saat ini diimplementasi in-memory;
-/// nanti cukup buat PostgresGreenRideRepository / MongoGreenRideRepository dan ganti di App.axaml.cs.
-/// </summary>
 public interface IGreenRideRepository
 {
-    // Akun
     AccountInfo? Authenticate(string email, string password);
-    AccountInfo? Register(string nama, string email, string password); // null jika email sudah dipakai
-
-    // Moda transportasi
+    AccountInfo? Register(string nama, string email, string password);
     IReadOnlyList<TransportMode> GetTransportModes();
-
-    // Log perjalanan (rentang tanggal inklusif)
-    IReadOnlyList<DailyLog> GetLogs(int userId, DateTime from, DateTime to);
-    DailyLog AddLog(DailyLog log);
-    void UpdateLog(DailyLog log);
-
-    // Badge milik user (baris ada = badge diraih)
-    IReadOnlyList<UserBadge> GetUserBadges(int userId);
-    void AddUserBadge(UserBadge badge);
+    TripLog StartTrip(Guid userId, int modaId);
+    TripLog? GetActiveTrip(Guid userId);
+    TripLog CompleteTrip(Guid tripId, decimal faktorEmisi);
+    IReadOnlyList<TripLog> GetTripLogs(Guid userId, DateOnly from, DateOnly to);
+    void UpdateTripLog(Guid tripId, int modaIdBaru, decimal faktorEmisiBaru);
+    Task<TripLog?> UpdateTripLog(Guid tripId, DateTime waktuMulai, DateTime waktuSelesai);
+    WeeklyBadge? GetPreviousWeekBadge(Guid userId);
+    IReadOnlyList<WeeklyBadge> GetAllWeeklyBadges(Guid userId);
+    void AddWeeklyBadge(WeeklyBadge badge);
+    Dictionary<DateOnly, decimal> GetCalendarEmission(Guid userId, int year, int month);
+    IReadOnlyList<LeaderboardEntry> GetLeaderboard(DateOnly weekStart);
 }

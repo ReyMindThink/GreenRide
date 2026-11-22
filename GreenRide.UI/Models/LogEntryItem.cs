@@ -2,23 +2,46 @@ using GreenRide.Models;
 
 namespace GreenRide.UI.Models;
 
+/// <summary>Item tampilan untuk satu perjalanan (TripLog).</summary>
 public sealed class LogEntryItem
 {
-    public DailyLog Log { get; }
-    public TransportMode Mode { get; }
+    public TripLog Log { get; }
+    /// <summary>Mode opsional untuk menampilkan nama moda.</summary>
+    public TransportMode? Mode { get; }
 
-    public LogEntryItem(DailyLog log, TransportMode mode)
+    public LogEntryItem(TripLog log, TransportMode? mode = null)
     {
-        Log = log;
+        Log  = log;
         Mode = mode;
     }
 
-    public string Emoji => ModeCatalog.EmojiFor(Mode.TransportModeId);
-    public string ModaNama => Mode.NamaModa;
-    public double Emisi => Log.HitungEmisiHarian(Mode);
-    public string EmisiText => Fmt.Kg(Emisi);
-    public string DetailText => $"{Log.Durasi} menit · {Log.Tanggal.ToString("ddd, d MMM", Fmt.Id)}";
+    /// <summary>ID moda transportasi — dipakai front end untuk menampilkan ikon vektor.</summary>
+    public int ModaId => Log.ModaId;
 
-    /// <summary>Revisi hanya boleh untuk log dalam rentang 1 hari (hari ini / kemarin).</summary>
-    public bool CanRevise => (DateTime.Today - Log.Tanggal.Date).TotalDays <= 1;
+    public string ModaNama => Mode?.NamaModa ?? "";
+
+    /// <summary>Emisi sudah dihitung backend saat CompleteTrip.</summary>
+    public double Emisi => (double)(Log.EmisiKg ?? 0m);
+    public string EmisiText => Fmt.Kg(Emisi);
+
+    /// <summary>Durasi dari DurasiMenit, mis. "2,13"; kosong-nol jika trip belum selesai.</summary>
+    public string DurasiText => (Log.DurasiMenit ?? 0m).ToString("0.00", Fmt.Id);
+
+    public string DetailText
+    {
+        get
+        {
+            var tgl = Log.Tanggal.ToString("ddd, d MMM", Fmt.Id);
+            if (Log.WaktuSelesai.HasValue)
+            {
+                var dur = (int)(Log.WaktuSelesai.Value - Log.WaktuMulai).TotalMinutes;
+                return $"{tgl} · {dur} menit";
+            }
+            return tgl;
+        }
+    }
+
+    /// <summary>Revisi hanya boleh untuk log hari ini atau kemarin.</summary>
+    public bool CanRevise =>
+        (DateOnly.FromDateTime(DateTime.Today).DayNumber - Log.Tanggal.DayNumber) <= 1;
 }

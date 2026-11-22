@@ -26,8 +26,8 @@ public partial class DashboardViewModel : PageViewModelBase
 
     public DashboardViewModel(IGreenRideRepository repo, GamificationService gami, AccountInfo account)
     {
-        _repo = repo;
-        _gami = gami;
+        _repo    = repo;
+        _gami    = gami;
         _account = account;
         Refresh();
     }
@@ -39,13 +39,13 @@ public partial class DashboardViewModel : PageViewModelBase
     public void Refresh()
     {
         var uid = _account.UserId;
-        _gami.RefreshBadges(uid);
 
-        Greeting = $"Halo, {_account.Nama} 👋";
-        TotalPoin = _gami.TotalPoin(uid);
+        try { _gami.RefreshBadges(uid); } catch { }
+
+        Greeting    = $"Halo, {_account.Nama}";
+        TotalPoin   = _gami.TotalPoin(uid);
         AvoidedText = _gami.EmisiDihindari(uid).ToString("0.0", Fmt.Id) + " kg";
 
-        // Badge: IsEarned dari keberadaan baris UserBadge → tampil abu-abu bila belum diraih
         var earned = _gami.BadgeDiraih(uid);
         Badges.Clear();
         foreach (var def in BadgeRules.All)
@@ -59,23 +59,29 @@ public partial class DashboardViewModel : PageViewModelBase
             ?? new BadgeItem(BadgeRules.All[0], false);
 
         // Progres minggu berjalan
-        var ws = GamificationService.StartOfWeek(DateTime.Today);
-        var weekLogs = _repo.GetLogs(uid, ws, ws.AddDays(6));
-        var kg = _gami.Emisi(weekLogs);
+        var ws       = GamificationService.StartOfWeek(DateTime.Today);
+        var wsDate   = DateOnly.FromDateTime(ws);
+        var weekLogs = _repo.GetTripLogs(uid, wsDate, wsDate.AddDays(6));
+        var kg       = GamificationService.Emisi(weekLogs);
         WeekEmissionText = kg.ToString("0.00", Fmt.Id) + " kg";
 
         if (weekLogs.Count == 0)
-            ProgressText = "Belum ada perjalanan minggu ini. Yuk catat perjalanan pertamamu!";
+            ProgressText = "Belum ada perjalanan minggu ini.";
         else if (_gami.TierUntuk(kg) is { } tier)
-            ProgressText = $"Minggu ini {Fmt.Kg(kg)} — on track meraih {tier.Nama} (sisa batas {(tier.BatasKg - kg).ToString("0.00", Fmt.Id)} kg).";
+            ProgressText = $"Minggu ini {Fmt.Kg(kg)} — on track meraih {tier.Nama} " +
+                           $"(sisa {(tier.BatasKg - kg).ToString("0.00", Fmt.Id)} kg).";
         else
-            ProgressText = $"Minggu ini {Fmt.Kg(kg)} sudah melewati batas 10 kg. Tetap semangat, minggu depan mulai baru 💪";
+            ProgressText = $"Minggu ini {Fmt.Kg(kg)}, sudah melewati batas 10 kg. Semangat minggu depan!";
 
         // Perjalanan hari ini
-        var map = _gami.ModeMap();
+        var map   = _gami.ModeMap();
+        var today = DateOnly.FromDateTime(DateTime.Today);
         TodayLogs.Clear();
-        foreach (var l in _repo.GetLogs(uid, DateTime.Today, DateTime.Today))
-            if (map.TryGetValue(l.TransportModeId, out var m)) TodayLogs.Add(new LogEntryItem(l, m));
+        foreach (var l in _repo.GetTripLogs(uid, today, today))
+        {
+            map.TryGetValue(l.ModaId, out var m);
+            TodayLogs.Add(new LogEntryItem(l, m));
+        }
         HasTodayLogs = TodayLogs.Count > 0;
     }
 }

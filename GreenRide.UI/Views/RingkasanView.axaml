@@ -81,7 +81,7 @@
 
       </Grid>
 
-      <!-- ===== Detail hari terpilih + revisi moda/durasi (rentang 1 hari) ===== -->
+      <!-- ===== Detail hari terpilih + tombol revisi waktu (rentang 1 hari) ===== -->
       <Border Classes="card">
         <StackPanel Spacing="10">
           <TextBlock Text="{Binding DayTitle}" Classes="h2" />
@@ -96,7 +96,7 @@
                     <StackPanel Grid.Column="1" VerticalAlignment="Center">
                       <TextBlock Text="{Binding ModaNama}" FontWeight="Bold" />
                       <TextBlock Classes="muted" FontSize="12">
-                        <Run Text="{Binding Log.Durasi}" /><Run Text=" menit · " /><Run Text="{Binding EmisiText}" />
+                        <Run Text="{Binding DurasiText}" /><Run Text=" menit · " /><Run Text="{Binding EmisiText}" />
                       </TextBlock>
                     </StackPanel>
                     <Button Grid.Column="2" Classes="chip" Content="✏️ Revisi" VerticalAlignment="Center"
@@ -110,38 +110,6 @@
               </DataTemplate>
             </ItemsControl.ItemTemplate>
           </ItemsControl>
-
-          <!-- Panel revisi -->
-          <Border Background="#FFF8E1" BorderBrush="{DynamicResource GrAccent}" BorderThickness="2" CornerRadius="16" Padding="14"
-                  IsVisible="{Binding HasEditing}">
-            <StackPanel Spacing="10">
-              <TextBlock Text="✏️ Revisi Perjalanan (maks. 1 hari)" Classes="h2" />
-              <TextBlock Text="Pilih moda baru" Classes="muted" />
-              <ListBox Classes="modes" ItemsSource="{Binding RevisiModes}" SelectedItem="{Binding SelectedRevisiMode}"
-                       ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                       ScrollViewer.VerticalScrollBarVisibility="Disabled">
-                <ListBox.ItemsPanel>
-                  <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
-                </ListBox.ItemsPanel>
-                <ListBox.ItemTemplate>
-                  <DataTemplate>
-                    <StackPanel Spacing="4" HorizontalAlignment="Center" VerticalAlignment="Center">
-                      <TextBlock Text="{Binding Emoji}" FontSize="36" HorizontalAlignment="Center" />
-                      <TextBlock Text="{Binding Nama}" FontWeight="Bold" HorizontalAlignment="Center" />
-                    </StackPanel>
-                  </DataTemplate>
-                </ListBox.ItemTemplate>
-              </ListBox>
-              <TextBlock Text="Durasi baru (menit)" Classes="muted" />
-              <NumericUpDown Value="{Binding RevisiDurasi}" Minimum="1" Maximum="600" Increment="5" FormatString="0" />
-              <TextBlock Text="{Binding RevisiError}" Classes="error" TextWrapping="Wrap"
-                         IsVisible="{Binding RevisiError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-              <StackPanel Orientation="Horizontal" Spacing="10">
-                <Button Classes="primary" Content="Simpan Revisi" Command="{Binding SimpanRevisiCommand}" />
-                <Button Classes="ghost" Content="Batal" Command="{Binding BatalRevisiCommand}" />
-              </StackPanel>
-            </StackPanel>
-          </Border>
         </StackPanel>
       </Border>
 
