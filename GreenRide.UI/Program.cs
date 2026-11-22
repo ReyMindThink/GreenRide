@@ -17,29 +17,37 @@ internal sealed class Program
     }
 
     /// <summary>
-    /// Mencari file .env di beberapa lokasi (mendukung dev dan production).
+    /// Mencari file .env: pertama di folder tempat .exe berada (versi kemasan), lalu dari
+    /// folder kerja naik ke induknya (mode pengembangan, maks 4 level).
     /// </summary>
     private static void LoadDotEnv()
     {
-        // Cari .env dari direktori kerja, lalu naik ke induk (maks 4 level)
-        var dir = new DirectoryInfo(Directory.GetCurrentDirectory());
-        for (int i = 0; i < 5 && dir is not null; i++, dir = dir.Parent)
+        foreach (var start in new[] { AppContext.BaseDirectory, Directory.GetCurrentDirectory() })
         {
-            var path = Path.Combine(dir.FullName, ".env");
-            if (!File.Exists(path)) continue;
-
-            foreach (var raw in File.ReadAllLines(path))
+            var dir = new DirectoryInfo(start);
+            for (int i = 0; i < 5 && dir is not null; i++, dir = dir.Parent)
             {
-                var line = raw.Trim();
-                if (line.Length == 0 || line.StartsWith('#')) continue;
-                var idx = line.IndexOf('=');
-                if (idx < 1) continue;
-                var key = line[..idx].Trim();
-                var val = line[(idx + 1)..].Trim();
-                if (!string.IsNullOrEmpty(key))
-                    Environment.SetEnvironmentVariable(key, val);
+                var path = Path.Combine(dir.FullName, ".env");
+                if (!File.Exists(path)) continue;
+
+                ApplyEnvFile(path);
+                return; // berhenti di file .env pertama yang ditemukan
             }
-            return; // berhenti di file .env pertama yang ditemukan
+        }
+    }
+
+    private static void ApplyEnvFile(string path)
+    {
+        foreach (var raw in File.ReadAllLines(path))
+        {
+            var line = raw.Trim();
+            if (line.Length == 0 || line.StartsWith('#')) continue;
+            var idx = line.IndexOf('=');
+            if (idx < 1) continue;
+            var key = line[..idx].Trim();
+            var val = line[(idx + 1)..].Trim();
+            if (!string.IsNullOrEmpty(key))
+                Environment.SetEnvironmentVariable(key, val);
         }
     }
 
