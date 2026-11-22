@@ -2,7 +2,6 @@ using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using GreenRide.UI.Services;
-using GreenRide.UI.Services.Mock;
 using GreenRide.UI.ViewModels;
 using GreenRide.UI.Views;
 using Microsoft.Extensions.DependencyInjection;
@@ -40,12 +39,12 @@ public partial class App : Application
 
         // Data. TAHAP 1: Mock (data palsu). Nanti diganti adapter ke backend/Supabase,
         // cukup ganti lima baris di bawah ini.
-        sc.AddSingleton<MockGreenRideBackend>();
-        sc.AddSingleton<IAuthService>(p => p.GetRequiredService<MockGreenRideBackend>());
-        sc.AddSingleton<ITripService>(p => p.GetRequiredService<MockGreenRideBackend>());
-        sc.AddSingleton<IEmissionService>(p => p.GetRequiredService<MockGreenRideBackend>());
-        sc.AddSingleton<IBadgeProgressService>(p => p.GetRequiredService<MockGreenRideBackend>());
-        sc.AddSingleton<ILeaderboardService>(p => p.GetRequiredService<MockGreenRideBackend>());
+        sc.AddSingleton<PostgresGreenRideRepository>();
+        sc.AddSingleton<IAuthService>(p => p.GetRequiredService<PostgresGreenRideRepository>());
+        sc.AddSingleton<ITripService>(p => p.GetRequiredService<PostgresGreenRideRepository>());
+        sc.AddSingleton<IEmissionService>(p => p.GetRequiredService<PostgresGreenRideRepository>());
+        sc.AddSingleton<IBadgeProgressService>(p => p.GetRequiredService<PostgresGreenRideRepository>());
+        sc.AddSingleton<ILeaderboardService>(p => p.GetRequiredService<PostgresGreenRideRepository>());
 
         // ViewModel
         sc.AddSingleton<MainViewModel>();

@@ -96,24 +96,33 @@ public sealed partial class CatatViewModel : ViewModelBase, INavigationAware, ID
         var user = _session.CurrentUser;
         if (user is null) return;
 
+        // PRD 5.2: timer berbasis cloud. Bila ada log tanpa waktu_selesai, kartu moda otomatis menyala.
+        // Dipisah dari badge agar pemulihan timer tidak ikut gagal bila layanan badge error.
         try
         {
-            var activeTask = _trips.GetActiveTripAsync(user.Id);
-            var lastTask = _badges.GetLastWeekBadgeAsync(user.Id);
-            var earnedTask = _badges.GetEarnedBadgesAsync(user.Id);
-            await Task.WhenAll(activeTask, lastTask, earnedTask);
+            var active = await _trips.GetActiveTripAsync(user.Id);
             if (_disposed) return;
-
-            ShowLastWeek(lastTask.Result);
-            ShowShelf(earnedTask.Result);
-
-            // PRD 5.2: timer berbasis cloud. Bila ada log tanpa waktu_selesai, kartu moda otomatis menyala.
-            ApplyActive(activeTask.Result);
+            ApplyActive(active);
         }
         catch (Exception ex)
         {
             Debug.WriteLine($"[Catat] {ex}");
             ErrorMessage = ex is ServiceException ? ex.Message : "Data tidak dapat dimuat. Coba lagi.";
+        }
+
+        try
+        {
+            var lastTask = _badges.GetLastWeekBadgeAsync(user.Id);
+            var earnedTask = _badges.GetEarnedBadgesAsync(user.Id);
+            await Task.WhenAll(lastTask, earnedTask);
+            if (_disposed) return;
+
+            ShowLastWeek(lastTask.Result);
+            ShowShelf(earnedTask.Result);
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[Catat] badge: {ex}");
         }
     }
 
