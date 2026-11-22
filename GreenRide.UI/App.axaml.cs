@@ -37,8 +37,7 @@ public partial class App : Application
         sc.AddSingleton<ISessionService, SessionService>();
         sc.AddSingleton<INavigationService, NavigationService>();
 
-        // Data. TAHAP 1: Mock (data palsu). Nanti diganti adapter ke backend/Supabase,
-        // cukup ganti lima baris di bawah ini.
+        // Data: satu repository PostgreSQL (Supabase) melayani kelima layanan di bawah.
         sc.AddSingleton<PostgresGreenRideRepository>();
         sc.AddSingleton<IAuthService>(p => p.GetRequiredService<PostgresGreenRideRepository>());
         sc.AddSingleton<ITripService>(p => p.GetRequiredService<PostgresGreenRideRepository>());
@@ -59,6 +58,5 @@ public partial class App : Application
         sc.AddTransient<RingkasanViewModel>();
         sc.AddTransient<RevisiViewModel>();
         sc.AddTransient<LeaderboardViewModel>();
-        sc.AddTransient<PlaceholderViewModel>();
     }
 }

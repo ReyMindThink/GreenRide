@@ -5,7 +5,7 @@
 2. Bintang Khalifa Hadianto - 24/534951/TK/59312
 3. Rasyid Rayhan Novandy - 24/545518/TK/60688
 
-**Project Senior Project TI**
+**Proyek Junior Project**
 Departemen Teknik Elektro dan Teknologi Informasi, Fakultas Teknik, Universitas Gadjah Mada
 
 ### GreenRide (Aplikasi Desktop - Climate Action)
