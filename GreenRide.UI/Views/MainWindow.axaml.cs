@@ -21,7 +21,7 @@ public partial class MainWindow : Window
 
     /// <summary>
     /// Menandai jendela dengan pseudo-class :compact atau :medium agar style/layout bisa menyesuaikan
-    /// (mis. sidebar menyempit di tahap 3) tanpa mengubah desain besarnya.
+    /// (mis. sidebar menyempit) tanpa mengubah desain besarnya.
     /// </summary>
     private void UpdateSizeClass(double width)
     {

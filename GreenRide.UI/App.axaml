@@ -5,7 +5,7 @@
              x:Class="GreenRide.UI.App"
              RequestedThemeVariant="Light">
 
-  <!-- ViewModel -> View. Tahap berikutnya menambah baris di sini. -->
+  <!-- Pemetaan ViewModel ke View. -->
   <Application.DataTemplates>
     <DataTemplate DataType="vm:SplashViewModel">
       <views:SplashView />
@@ -33,9 +33,6 @@
     </DataTemplate>
     <DataTemplate DataType="vm:LeaderboardViewModel">
       <views:LeaderboardView />
-    </DataTemplate>
-    <DataTemplate DataType="vm:PlaceholderViewModel">
-      <views:PlaceholderView />
     </DataTemplate>
   </Application.DataTemplates>
 
