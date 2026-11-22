@@ -1,1 +1,7 @@
 .env
+
+# Output build & file IDE
+bin/
+obj/
+.vs/
+.DS_Store
