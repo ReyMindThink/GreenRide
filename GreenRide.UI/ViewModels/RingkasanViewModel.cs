@@ -1,227 +1,362 @@
 using System.Collections.ObjectModel;
+using System.Diagnostics;
+using System.Windows.Input;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using GreenRide.UI.Helpers;
 using GreenRide.UI.Models;
 using GreenRide.UI.Services;
-using LiveChartsCore;
-using LiveChartsCore.Measure;
-using LiveChartsCore.SkiaSharpView;
-using LiveChartsCore.SkiaSharpView.Painting;
-using SkiaSharp;
 
 namespace GreenRide.UI.ViewModels;
 
-public partial class RingkasanViewModel : PageViewModelBase
+/// <summary>Satu batang pada grafik emisi mingguan.</summary>
+public sealed record WeekBarItem(string Label, string ValueText, double BarHeight, bool Started, bool IsCurrent);
+
+/// <summary>Satu sel kalender. Sel kosong (Date = null) hanya mengisi posisi hari pertama bulan.</summary>
+public sealed partial class CalendarCellItem : ObservableObject
 {
-    private readonly IGreenRideRepository _repo;
-    private readonly GamificationService _gami;
-    private readonly AccountInfo _account;
-
-    public string[] WeekdayNames { get; } = { "Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min" };
-    public ObservableCollection<CalendarDay> Days { get; } = new();
-    public ObservableCollection<LogEntryItem> SelectedLogs { get; } = new();
-    public ObservableCollection<TransportOption> RevisiModes { get; } = new();
-
-    // ---- grafik mingguan (LiveCharts2)
-    [ObservableProperty] private ISeries[] _series = Array.Empty<ISeries>();
-    [ObservableProperty] private Axis[] _xAxes = Array.Empty<Axis>();
-    [ObservableProperty] private Axis[] _yAxes = Array.Empty<Axis>();
-    [ObservableProperty] [NotifyPropertyChangedFor(nameof(WeekLabel))] private DateTime _weekStart;
-    [ObservableProperty] private string _weekTotalText = "";
-    [ObservableProperty] private string _weekBadgeText = "";
-
-    // ---- kalender
-    [ObservableProperty] [NotifyPropertyChangedFor(nameof(MonthLabel))] private DateTime _month;
-    [ObservableProperty] private DateTime _selectedDate;
-
-    // ---- detail hari + revisi
-    [ObservableProperty] private string _dayTitle = "";
-    [ObservableProperty] private string _dayTotalText = "";
-    [ObservableProperty] private bool _hasNoLogs;
-    [ObservableProperty] [NotifyPropertyChangedFor(nameof(HasEditing))] private LogEntryItem? _editing;
-    [ObservableProperty] private TransportOption? _selectedRevisiMode;
-    [ObservableProperty] private decimal? _revisiDurasi;
-    [ObservableProperty] private string? _revisiError;
-
-    public bool HasEditing => Editing is not null;
-    public string WeekLabel =>
-        $"{WeekStart.ToString("d MMM", Fmt.Id)} – {WeekStart.AddDays(6).ToString("d MMM yyyy", Fmt.Id)}";
-    public string MonthLabel => Month.ToString("MMMM yyyy", Fmt.Id);
-
-    public RingkasanViewModel(IGreenRideRepository repo, GamificationService gami, AccountInfo account)
+    public CalendarCellItem(DateOnly? date, CalendarLevel level, bool isToday, ICommand? command)
     {
-        _repo = repo;
-        _gami = gami;
-        _account = account;
-
-        foreach (var m in repo.GetTransportModes()) RevisiModes.Add(new TransportOption(m));
-
-        var today = DateTime.Today;
-        _weekStart = GamificationService.StartOfWeek(today);
-        _month = new DateTime(today.Year, today.Month, 1);
-        _selectedDate = today;
-        Reload();
+        Date = date;
+        Level = level;
+        IsToday = isToday;
+        Command = command;
     }
 
-    public override void OnNavigatedTo() => Reload();
+    public DateOnly? Date { get; }
+    public CalendarLevel Level { get; }
+    public bool IsToday { get; }
+    public ICommand? Command { get; }
 
-    private void Reload()
+    public string Text => Date is { } d ? d.Day.ToString() : "";
+    public bool IsBlank => Date is null;
+    public bool IsNotBlank => Date is not null;
+    public bool IsGood => Level == CalendarLevel.Good;
+    public bool IsAverage => Level == CalendarLevel.Average;
+    public bool IsHigh => Level == CalendarLevel.High;
+    public bool IsNone => Level == CalendarLevel.None;
+
+    [ObservableProperty] private bool _isSelected;
+}
+
+/// <summary>Satu baris di tabel "Catatan perjalanan".</summary>
+public sealed class TripRowItem
+{
+    public TripRowItem(TripLog log, bool canRevise, ICommand reviseCommand)
     {
-        BuildChart();
-        BuildCalendar();
-        LoadDay();
+        var mode = ModeCatalog.Get(log.ModaId);
+        ModeName = mode.Nama;
+        IconUri = AssetUri.Of(mode.IconUri);
+        TimeText = log.WaktuSelesai is { } selesai
+            ? Fmt.TimeRange(log.WaktuMulai, selesai)
+            : Fmt.Clock(log.WaktuMulai) + "–…";
+        DurasiText = log.DurasiMenit is { } menit ? Fmt.Minutes(menit) : "—";
+        EmisiText = log.EmisiKg is { } kg ? Fmt.Kg(kg, 4) : "—";
+        StatusText = log.IsRunning ? "Berjalan" : log.IsRevised ? "Direvisi" : "Tercatat";
+        CanRevise = canRevise && !log.IsRunning;
+        ReviseCommand = reviseCommand;
     }
 
-    // ===================== GRAFIK =====================
-    private void BuildChart()
-    {
-        var map = _gami.ModeMap();
-        var logs = _repo.GetLogs(_account.UserId, WeekStart, WeekStart.AddDays(6));
+    public string ModeName { get; }
+    public string IconUri { get; }
+    public string TimeText { get; }
+    public string DurasiText { get; }
+    public string EmisiText { get; }
+    public string StatusText { get; }
+    public bool CanRevise { get; }
+    public ICommand ReviseCommand { get; }
 
-        var values = new double[7];
-        var labels = new string[7];
-        for (int i = 0; i < 7; i++)
+    /// <summary>Baris kedua pada tampilan sempit.</summary>
+    public string DetailText => $"{TimeText} · {DurasiText} · {StatusText}";
+}
+
+/// <summary>Layar Ringkasan: grafik emisi mingguan, kalender emisi, dan catatan perjalanan tanggal terpilih.</summary>
+public sealed partial class RingkasanViewModel : ViewModelBase, INavigationAware, IDisposable
+{
+    /// <summary>Tinggi area batang (px). Harus sama dengan area garis bantu di RingkasanView.axaml.</summary>
+    private const double PlotHeight = 160;
+
+    private readonly ISessionService _session;
+    private readonly ITripService _trips;
+    private readonly IEmissionService _emission;
+    private readonly DateOnly _today;
+
+    private int _year;
+    private int _month;
+    private DateOnly _selected;
+    private bool _disposed;
+
+    public RingkasanViewModel(ISessionService session, ITripService trips, IEmissionService emission, IClock clock)
+    {
+        _session = session;
+        _trips = trips;
+        _emission = emission;
+
+        _today = clock.Today;
+        _year = _today.Year;
+        _month = _today.Month;
+        _selected = _today;
+        MonthLabel = Fmt.MonthYear(_year, _month);
+        MonthName = Fmt.MonthName(_month);
+    }
+
+    /// <summary>Diisi Shell: dipanggil saat tombol Revisi pada sebuah perjalanan ditekan.</summary>
+    public Action<TripLog>? OnRevise { get; set; }
+
+    public ObservableCollection<WeekBarItem> Bars { get; } = new();
+    public ObservableCollection<CalendarCellItem> Cells { get; } = new();
+    public ObservableCollection<TripRowItem> Rows { get; } = new();
+
+    // ---- Header
+    [ObservableProperty] private string _monthLabel = "";
+    [ObservableProperty] private string _monthName = "";
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(NextMonthCommand))]
+    private bool _canGoNext;
+
+    // ---- Kartu Emisi mingguan
+    [ObservableProperty] private string _monthTotalText = "";
+    [ObservableProperty] private string _monthTotalCaption = "";
+    [ObservableProperty] private string _compareTitle = "";
+    [ObservableProperty] private string _compareSubtitle = "";
+    [ObservableProperty] private bool _compareIsHigher;
+    [ObservableProperty] private string _axis0 = "0";
+    [ObservableProperty] private string _axis1 = "2";
+    [ObservableProperty] private string _axis2 = "4";
+    [ObservableProperty] private string _axis3 = "6";
+    [ObservableProperty] private string _axis4 = "8";
+
+    // ---- Kartu Kalender
+    [ObservableProperty] private string _selectedDayLabel = "";
+    [ObservableProperty] private string _selectedDayTotal = "";
+
+    // ---- Kartu Catatan perjalanan
+    [ObservableProperty] private string _tripsTitle = "Catatan perjalanan hari ini";
+    [ObservableProperty] private string _tripsSubtitle = "";
+    [ObservableProperty] private bool _hasTrips;
+    [ObservableProperty] private bool _showPastNote;
+    [ObservableProperty] private string? _errorMessage;
+
+    public async Task OnNavigatedToAsync() => await LoadMonthAsync();
+
+    // ------------------------------------------------------------ Navigasi bulan
+
+    [RelayCommand]
+    private Task PreviousMonthAsync() => ChangeMonthAsync(-1);
+
+    [RelayCommand(CanExecute = nameof(CanGoNext))]
+    private Task NextMonthAsync() => ChangeMonthAsync(1);
+
+    private async Task ChangeMonthAsync(int delta)
+    {
+        var first = new DateOnly(_year, _month, 1).AddMonths(delta);
+        _year = first.Year;
+        _month = first.Month;
+        _selected = default; // dipilih ulang di LoadMonthAsync
+        await LoadMonthAsync();
+    }
+
+    // ------------------------------------------------------------ Memuat data
+
+    private async Task LoadMonthAsync()
+    {
+        var user = _session.CurrentUser;
+        if (user is null) return;
+
+        ErrorMessage = null;
+        try
         {
-            var d = WeekStart.AddDays(i);
-            values[i] = Math.Round(logs.Where(l => l.Tanggal.Date == d)
-                .Sum(l => map.TryGetValue(l.TransportModeId, out var m) ? l.HitungEmisiHarian(m) : 0), 2);
-            labels[i] = d.ToString("ddd d", Fmt.Id);
+            var daysTask = _emission.GetMonthAsync(user.Id, _year, _month);
+            var weeksTask = _emission.GetWeeklyAsync(user.Id, _year, _month);
+            await Task.WhenAll(daysTask, weeksTask);
+            if (_disposed) return;
+
+            var days = daysTask.Result;
+            var weeks = weeksTask.Result;
+            var isCurrentMonth = _year == _today.Year && _month == _today.Month;
+
+            MonthLabel = Fmt.MonthYear(_year, _month);
+            MonthName = Fmt.MonthName(_month);
+            CanGoNext = new DateOnly(_year, _month, 1) < new DateOnly(_today.Year, _today.Month, 1);
+
+            if (_selected == default || _selected.Year != _year || _selected.Month != _month)
+            {
+                _selected = isCurrentMonth
+                    ? _today
+                    : days.LastOrDefault(d => d.TotalEmisiKg.HasValue)?.Tanggal ?? new DateOnly(_year, _month, 1);
+            }
+
+            BuildCalendar(days);
+            BuildChart(weeks);
+
+            var total = days.Sum(d => d.TotalEmisiKg ?? 0m);
+            MonthTotalText = Fmt.Co2(total);
+            MonthTotalCaption = isCurrentMonth
+                ? $"Total bulan ini · hingga {Fmt.DayMonth(_today)}"
+                : $"Total bulan {Fmt.MonthName(_month)}";
+
+            await BuildCompareAsync(user.Id, weeks);
+            await LoadDayAsync();
         }
-
-        var green = SKColor.Parse("#43A047");
-        var dark = SKColor.Parse("#1B5E20");
-
-        Series = new ISeries[]
+        catch (Exception ex)
         {
-            new ColumnSeries<double>
-            {
-                Name = "kg CO₂",
-                Values = values,
-                Fill = new SolidColorPaint(green),
-                MaxBarWidth = 34,
-                Rx = 6, Ry = 6,
-                DataLabelsPaint = new SolidColorPaint(dark),
-                DataLabelsSize = 12,
-                DataLabelsPosition = DataLabelsPosition.End,
-                DataLabelsFormatter = p => p.Coordinate.PrimaryValue.ToString("0.0"),
-            }
-        };
-        XAxes = new[] { new Axis { Labels = labels, TextSize = 12, LabelsPaint = new SolidColorPaint(dark) } };
-        YAxes = new[]
-        {
-            new Axis
-            {
-                MinLimit = 0, TextSize = 12,
-                LabelsPaint = new SolidColorPaint(dark),
-                SeparatorsPaint = new SolidColorPaint(SKColor.Parse("#C8E6C9")) { StrokeThickness = 1 },
-            }
-        };
-
-        var total = values.Sum();
-        WeekTotalText = Fmt.Kg(total);
-        WeekBadgeText = logs.Count == 0
-            ? "Belum ada catatan di minggu ini"
-            : _gami.TierUntuk(total) is { } t ? $"🏅 Memenuhi {t.Nama} ({t.Syarat})" : "Belum memenuhi syarat badge minggu ini";
+            Debug.WriteLine($"[Ringkasan] {ex}");
+            ErrorMessage = ex is ServiceException ? ex.Message : "Data tidak dapat dimuat. Coba lagi.";
+        }
     }
 
-    [RelayCommand]
-    private void PrevWeek() { WeekStart = WeekStart.AddDays(-7); BuildChart(); }
-
-    [RelayCommand]
-    private void NextWeek()
+    private void BuildCalendar(IReadOnlyList<CalendarDayEmission> days)
     {
-        if (WeekStart >= GamificationService.StartOfWeek(DateTime.Today)) return;
-        WeekStart = WeekStart.AddDays(7);
-        BuildChart();
-    }
+        Cells.Clear();
+        if (days.Count == 0) return;
 
-    // ===================== KALENDER =====================
-    private void BuildCalendar()
-    {
-        var gridStart = GamificationService.StartOfWeek(Month);
-        var gridEnd = gridStart.AddDays(41);
-        var logs = _repo.GetLogs(_account.UserId, gridStart, gridEnd);
-        var map = _gami.ModeMap();
+        // Senin = kolom pertama
+        var offset = ((int)days[0].Tanggal.DayOfWeek + 6) % 7;
+        for (var i = 0; i < offset; i++)
+            Cells.Add(new CalendarCellItem(null, CalendarLevel.None, false, null));
 
-        Days.Clear();
-        for (int i = 0; i < 42; i++)
+        foreach (var d in days)
         {
-            var d = gridStart.AddDays(i);
-            var dayLogs = logs.Where(l => l.Tanggal.Date == d).ToList();
-            double? kg = dayLogs.Count == 0 ? null
-                : dayLogs.Sum(l => map.TryGetValue(l.TransportModeId, out var m) ? l.HitungEmisiHarian(m) : 0);
-            var emojis = string.Concat(dayLogs.Select(l => ModeCatalog.EmojiFor(l.TransportModeId)).Distinct().Take(2));
-
-            Days.Add(new CalendarDay(d, d.Month == Month.Month, d == DateTime.Today, emojis, kg)
+            var date = d.Tanggal;
+            Cells.Add(new CalendarCellItem(
+                date,
+                CalendarRules.LevelFor(d.TotalEmisiKg),
+                date == _today,
+                new AsyncRelayCommand(() => SelectDayAsync(date)))
             {
-                IsSelected = d == SelectedDate.Date,
+                IsSelected = date == _selected,
             });
         }
     }
 
-    [RelayCommand]
-    private void PrevMonth() { Month = Month.AddMonths(-1); BuildCalendar(); }
-
-    [RelayCommand]
-    private void NextMonth() { Month = Month.AddMonths(1); BuildCalendar(); }
-
-    [RelayCommand]
-    private void SelectDay(CalendarDay? day)
+    private void BuildChart(IReadOnlyList<WeeklyEmissionPoint> weeks)
     {
-        if (day is null) return;
-        SelectedDate = day.Date;
-        foreach (var d in Days) d.IsSelected = d.Date == day.Date;
-        LoadDay();
+        var max = weeks.Where(w => w.Started).Select(w => w.TotalEmisiKg).DefaultIfEmpty(0m).Max();
+        var axisMax = Math.Max(8m, Math.Ceiling(max / 4m) * 4m);
+        var step = axisMax / 4m;
+
+        Axis0 = "0";
+        Axis1 = Fmt.Number(step, 0);
+        Axis2 = Fmt.Number(step * 2, 0);
+        Axis3 = Fmt.Number(step * 3, 0);
+        Axis4 = Fmt.Number(axisMax, 0);
+
+        var currentMonday = WeekHelper.MondayOf(_today);
+        Bars.Clear();
+        foreach (var w in weeks)
+        {
+            var height = w.Started ? Math.Max(3d, (double)(w.TotalEmisiKg / axisMax) * PlotHeight) : 0d;
+            Bars.Add(new WeekBarItem(
+                Fmt.DayMonthShort(w.MingguMulai),
+                w.Started ? Fmt.Number(w.TotalEmisiKg, 2) : "Belum mulai",
+                height,
+                w.Started,
+                w.MingguMulai == currentMonday));
+        }
     }
 
-    // ===================== DETAIL HARI =====================
-    private void LoadDay()
+    private async Task BuildCompareAsync(Guid userId, IReadOnlyList<WeeklyEmissionPoint> weeks)
     {
-        var map = _gami.ModeMap();
-        SelectedLogs.Clear();
-        foreach (var l in _repo.GetLogs(_account.UserId, SelectedDate, SelectedDate))
-            if (map.TryGetValue(l.TransportModeId, out var m)) SelectedLogs.Add(new LogEntryItem(l, m));
+        CompareIsHigher = false;
 
-        DayTitle = SelectedDate.ToString("dddd, d MMMM yyyy", Fmt.Id);
-        HasNoLogs = SelectedLogs.Count == 0;
-        DayTotalText = HasNoLogs ? "Belum ada perjalanan dicatat" : "Total " + Fmt.Kg(SelectedLogs.Sum(x => x.Emisi));
-        Editing = null;
-        RevisiError = null;
+        var started = weeks.Where(w => w.Started).ToList();
+        if (started.Count == 0)
+        {
+            CompareTitle = "Belum ada data";
+            CompareSubtitle = "Belum ada minggu yang dimulai";
+            return;
+        }
+
+        var current = started[^1];
+        var previous = await WeekTotalAsync(userId, current.MingguMulai.AddDays(-7), weeks);
+        if (_disposed) return;
+
+        CompareSubtitle = current.MingguMulai == WeekHelper.MondayOf(_today)
+            ? "Minggu ini vs minggu lalu"
+            : $"Minggu {Fmt.DayMonthShort(current.MingguMulai)} vs minggu sebelumnya";
+
+        if (previous <= 0m)
+        {
+            CompareTitle = "Belum ada pembanding";
+            return;
+        }
+
+        var percent = (int)Math.Round(
+            Math.Abs(current.TotalEmisiKg - previous) / previous * 100m, 0, MidpointRounding.AwayFromZero);
+
+        if (current.TotalEmisiKg < previous)
+        {
+            CompareTitle = $"{percent}% lebih rendah";
+        }
+        else if (current.TotalEmisiKg > previous)
+        {
+            CompareTitle = $"{percent}% lebih tinggi";
+            CompareIsHigher = true;
+        }
+        else
+        {
+            CompareTitle = "Sama dengan minggu sebelumnya";
+        }
     }
 
-    // ===================== REVISI (moda + durasi, rentang 1 hari) =====================
-    [RelayCommand]
-    private void MulaiRevisi(LogEntryItem? item)
+    /// <summary>Total sebuah minggu; bila minggunya ada di bulan lain, datanya diminta terpisah.</summary>
+    private async Task<decimal> WeekTotalAsync(Guid userId, DateOnly monday, IReadOnlyList<WeeklyEmissionPoint> loaded)
     {
-        if (item is null || !item.CanRevise) return;
-        Editing = item;
-        SelectedRevisiMode = RevisiModes.FirstOrDefault(m => m.Mode.TransportModeId == item.Mode.TransportModeId);
-        RevisiDurasi = item.Log.Durasi;
-        RevisiError = null;
+        var hit = loaded.FirstOrDefault(p => p.MingguMulai == monday);
+        if (hit is not null) return hit.TotalEmisiKg;
+
+        var points = await _emission.GetWeeklyAsync(userId, monday.Year, monday.Month);
+        return points.FirstOrDefault(p => p.MingguMulai == monday)?.TotalEmisiKg ?? 0m;
     }
 
-    [RelayCommand]
-    private void SimpanRevisi()
+    // ------------------------------------------------------------ Tanggal terpilih
+
+    private async Task SelectDayAsync(DateOnly date)
     {
-        if (Editing is null) return;
-        if (SelectedRevisiMode is null) { RevisiError = "Pilih moda terlebih dahulu."; return; }
-        if (RevisiDurasi is not { } d || d <= 0) { RevisiError = "Durasi harus lebih dari 0 menit."; return; }
+        _selected = date;
+        foreach (var cell in Cells)
+            cell.IsSelected = cell.Date == date;
 
         try
-{
-    Editing.Log.RevisiDurasi((int)d);
-    Editing.Log.RevisiModa(SelectedRevisiMode.Mode);
-}
-catch (InvalidOperationException ex)
-{
-    RevisiError = ex.Message;
-    return;
-}
-_repo.UpdateLog(Editing.Log);
-
-        Reload();
+        {
+            await LoadDayAsync();
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[Ringkasan] {ex}");
+            ErrorMessage = ex is ServiceException ? ex.Message : "Data tidak dapat dimuat. Coba lagi.";
+        }
     }
 
-    [RelayCommand]
-    private void BatalRevisi() { Editing = null; RevisiError = null; }
+    private async Task LoadDayAsync()
+    {
+        var user = _session.CurrentUser;
+        if (user is null) return;
+
+        var date = _selected;
+        var logs = await _trips.GetLogsAsync(user.Id, date);
+        if (_disposed || date != _selected) return;
+
+        var isToday = date == _today;
+        Rows.Clear();
+        foreach (var log in logs)
+        {
+            var captured = log;
+            Rows.Add(new TripRowItem(log, isToday, new RelayCommand(() => OnRevise?.Invoke(captured))));
+        }
+
+        var total = logs.Where(l => l.EmisiKg.HasValue).Sum(l => l.EmisiKg!.Value);
+
+        SelectedDayLabel = isToday ? $"{Fmt.DayMonthShort(date)} · Hari ini" : Fmt.DayMonthShort(date);
+        SelectedDayTotal = logs.Count == 0 ? "Tanpa catatan" : Fmt.Co2(total);
+
+        TripsTitle = isToday ? "Catatan perjalanan hari ini" : "Catatan perjalanan";
+        TripsSubtitle = logs.Count == 0
+            ? Fmt.DateLong(date)
+            : $"{Fmt.DateLong(date)} · Total {Fmt.Co2(total)}";
+        HasTrips = logs.Count > 0;
+        ShowPastNote = !isToday && logs.Count > 0;
+    }
+
+    public void Dispose() => _disposed = true;
 }

@@ -1,106 +1,242 @@
 using System.Collections.ObjectModel;
+using System.Diagnostics;
+using System.Windows.Input;
+using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using GreenRide.Models;
+using GreenRide.UI.Helpers;
 using GreenRide.UI.Models;
 using GreenRide.UI.Services;
 
 namespace GreenRide.UI.ViewModels;
 
-public partial class CatatViewModel : PageViewModelBase
+/// <summary>Satu kartu moda (Motor / Mobil / Bus / Kereta).</summary>
+public sealed partial class ModeCardItem : ObservableObject
 {
-    private readonly IGreenRideRepository _repo;
-    private readonly GamificationService _gami;
-    private readonly AccountInfo _account;
-
-    public ObservableCollection<TransportOption> Modes { get; }
-    public ObservableCollection<LogEntryItem> RecentLogs { get; } = new();
-    public DateTime MaxTanggal => DateTime.Today;
-
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(PreviewText))]
-    [NotifyPropertyChangedFor(nameof(CompareText))]
-    [NotifyCanExecuteChangedFor(nameof(SimpanCommand))]
-    private TransportOption? _selectedMode;
-
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(PreviewText))]
-    [NotifyPropertyChangedFor(nameof(CompareText))]
-    [NotifyCanExecuteChangedFor(nameof(SimpanCommand))]
-    private decimal? _durasiMenit = 30;
-
-    [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(SimpanCommand))]
-    private DateTime? _tanggal = DateTime.Today;
-
-    [ObservableProperty] private string _statusMessage = "";
-
-    public CatatViewModel(IGreenRideRepository repo, GamificationService gami, AccountInfo account)
+    public ModeCardItem(TransportMode mode, ICommand command)
     {
-        _repo = repo;
-        _gami = gami;
-        _account = account;
-        Modes = new ObservableCollection<TransportOption>(repo.GetTransportModes().Select(m => new TransportOption(m)));
-        LoadRecent();
+        Mode = mode;
+        Command = command;
+        IconUri = AssetUri.Of(mode.IconUri);
     }
 
-    public override void OnNavigatedTo() => LoadRecent();
+    public TransportMode Mode { get; }
+    public ICommand Command { get; }
+    public string IconUri { get; }
+    public string Label => Mode.Label;
+    public string FaktorLabel => Mode.FaktorLabel;
 
-    public string PreviewText =>
-        SelectedMode is null || DurasiMenit is not { } d || d <= 0
-            ? "Pilih moda & durasi"
-            : Fmt.Kg(SelectedMode.Mode.HitungEmisi((int)d));
+    /// <summary>Timer sedang berjalan dengan moda ini (kartu hijau).</summary>
+    [ObservableProperty] private bool _isActive;
 
-    public string CompareText
+    /// <summary>Kartu bisa ditekan. False untuk moda lain selama ada timer aktif (PRD 5.2).</summary>
+    [ObservableProperty] private bool _isEnabled = true;
+}
+
+/// <summary>Satu perisai di kartu Koleksi Badge.</summary>
+public sealed record BadgeShelfItem(string Nama, string BatasLabel, string IconUri, bool IsEarned);
+
+/// <summary>Layar Catat: badge minggu lalu, koleksi badge, timer, dan kartu moda.</summary>
+public sealed partial class CatatViewModel : ViewModelBase, INavigationAware, IDisposable
+{
+    private const string IdleTimer = "00.00.00";
+    private const string IdleCaption = "Pilih moda transportasi untuk mulai mencatat";
+
+    private readonly ISessionService _session;
+    private readonly ITripService _trips;
+    private readonly IBadgeProgressService _badges;
+    private readonly IClock _clock;
+    private readonly DispatcherTimer _timer;
+
+    private TripLog? _active;
+    private bool _disposed;
+
+    public CatatViewModel(
+        ISessionService session,
+        ITripService trips,
+        IBadgeProgressService badges,
+        IClock clock)
     {
-        get
+        _session = session;
+        _trips = trips;
+        _badges = badges;
+        _clock = clock;
+
+        _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
+        _timer.Tick += (_, _) => Refresh();
+
+        foreach (var mode in ModeCatalog.All)
         {
-            if (SelectedMode is null || DurasiMenit is not { } d || d <= 0) return "Estimasi emisi akan tampil di sini.";
-            var hemat = ModeCatalog.FaktorAcuanMobil * (double)d - SelectedMode.Mode.HitungEmisi((int)d);
-            return hemat > 0
-                ? $"🌱 Hemat {Fmt.Kg(hemat)} dibanding naik mobil"
-                : "Sama dengan emisi mobil. Coba moda lain untuk perjalanan berikutnya!";
+            var id = mode.Id;
+            Modes.Add(new ModeCardItem(mode, new AsyncRelayCommand(() => ToggleModeAsync(id))));
         }
+
+        ShowLastWeek(null);
+        ShowShelf(Array.Empty<WeeklyBadgeRecord>());
     }
 
-    [RelayCommand]
-    private void SetDurasi(string? menit)
-    {
-        if (decimal.TryParse(menit, out var v)) DurasiMenit = v;
-    }
+    public string Greeting => $"HALO, {(_session.CurrentUser?.Nama ?? "").ToUpperInvariant()}!";
 
-    private bool CanSimpan() => SelectedMode is not null && DurasiMenit is > 0 && Tanggal is not null;
+    public ObservableCollection<ModeCardItem> Modes { get; } = new();
+    public ObservableCollection<BadgeShelfItem> Shelf { get; } = new();
 
-    [RelayCommand(CanExecute = nameof(CanSimpan))]
-    private void Simpan()
+    // ---- Kartu badge minggu lalu
+    [ObservableProperty] private string _lastBadgeIcon = "";
+    [ObservableProperty] private string _lastBadgeName = "";
+    [ObservableProperty] private string _lastBadgeDescription = "";
+
+    // ---- Kartu timer
+    [ObservableProperty] private string _timerText = IdleTimer;
+    [ObservableProperty] private string _captionText = IdleCaption;
+    [ObservableProperty] private string? _errorMessage;
+    [ObservableProperty] private bool _isBusy;
+
+    public async Task OnNavigatedToAsync()
     {
-        var mode = SelectedMode!.Mode;
-        DailyLog log;
+        var user = _session.CurrentUser;
+        if (user is null) return;
+
         try
         {
-            log = new DailyLog(_account.UserId, Tanggal!.Value.Date, (int)DurasiMenit!.Value, mode.TransportModeId);
-        }
-        catch (InvalidOperationException ex)
-        {
-            StatusMessage = "⚠️ " + ex.Message;
-            return;
-        }
-        _repo.AddLog(log);
+            var activeTask = _trips.GetActiveTripAsync(user.Id);
+            var lastTask = _badges.GetLastWeekBadgeAsync(user.Id);
+            var earnedTask = _badges.GetEarnedBadgesAsync(user.Id);
+            await Task.WhenAll(activeTask, lastTask, earnedTask);
+            if (_disposed) return;
 
-        StatusMessage = $"✅ Tersimpan: {SelectedMode.Emoji} {SelectedMode.Nama}, {log.Durasi} menit ({Fmt.Kg(log.HitungEmisiHarian(mode))})";
-        SelectedMode = null;
-        DurasiMenit = 30;
-        Tanggal = DateTime.Today;
-        LoadRecent();
+            ShowLastWeek(lastTask.Result);
+            ShowShelf(earnedTask.Result);
+
+            // PRD 5.2: timer berbasis cloud. Bila ada log tanpa waktu_selesai, kartu moda otomatis menyala.
+            ApplyActive(activeTask.Result);
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[Catat] {ex}");
+            ErrorMessage = ex is ServiceException ? ex.Message : "Data tidak dapat dimuat. Coba lagi.";
+        }
     }
 
-    private void LoadRecent()
+    // ------------------------------------------------------------ Timer & moda
+
+    private async Task ToggleModeAsync(int modaId)
     {
-        var map = _gami.ModeMap();
-        RecentLogs.Clear();
-        var logs = _repo.GetLogs(_account.UserId, DateTime.Today.AddDays(-14), DateTime.Today)
-            .OrderByDescending(l => l.Tanggal).ThenByDescending(l => l.DailyLogId).Take(5);
-        foreach (var l in logs)
-            if (map.TryGetValue(l.TransportModeId, out var m)) RecentLogs.Add(new LogEntryItem(l, m));
+        var user = _session.CurrentUser;
+        if (user is null || IsBusy) return;
+
+        IsBusy = true;
+        ErrorMessage = null;
+        try
+        {
+            if (_active is null)
+            {
+                var trip = await _trips.StartTripAsync(user.Id, modaId);
+                if (_disposed) return;
+                ApplyActive(trip);
+            }
+            else if (_active.ModaId == modaId)
+            {
+                var done = await _trips.StopTripAsync(user.Id);
+                if (_disposed) return;
+                ApplyActive(null);
+                CaptionText = done.EmisiKg is { } kg
+                    ? $"Perjalanan selesai. Kamu menghasilkan {Fmt.Number(kg, 4)} kg CO₂."
+                    : "Perjalanan selesai.";
+            }
+            // moda lain saat timer berjalan: kartunya sudah disabled.
+        }
+        catch (ServiceException ex)
+        {
+            ErrorMessage = ex.Message;
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[Catat] {ex}");
+            ErrorMessage = "Tidak dapat menyimpan perjalanan. Coba lagi.";
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    private void ApplyActive(TripLog? trip)
+    {
+        _active = trip;
+
+        foreach (var card in Modes)
+        {
+            card.IsActive = trip is not null && card.Mode.Id == trip.ModaId;
+            card.IsEnabled = trip is null || card.IsActive;
+        }
+
+        if (trip is null)
+        {
+            _timer.Stop();
+            TimerText = IdleTimer;
+            CaptionText = IdleCaption;
+        }
+        else
+        {
+            Refresh();
+            _timer.Start();
+        }
+    }
+
+    /// <summary>Memperbarui tampilan timer dan emisi sementara.</summary>
+    private void Refresh()
+    {
+        if (_active is null) return;
+
+        var now = _clock.Now;
+        TimerText = Fmt.Stopwatch(now - _active.WaktuMulai);
+
+        var factor = ModeCatalog.Get(_active.ModaId).FaktorEmisi;
+        var kg = EmissionCalculator.LiveKg(_active.WaktuMulai, now, factor);
+        CaptionText = $"Kamu menghasilkan {Fmt.Number(kg, 4)} kg CO₂ dari perjalanan ini";
+    }
+
+    // ------------------------------------------------------------ Badge
+
+    private void ShowLastWeek(WeeklyBadgeRecord? record)
+    {
+        var def = record is null ? null : BadgeCatalog.Get(record.Badge);
+        if (record is not null && def is not null)
+        {
+            LastBadgeIcon = AssetUri.Of(def.IconUri);
+            LastBadgeName = def.Nama;
+            var limit = def.Level == BadgeLevel.ZeroTrace ? "0 kg CO₂" : $"≤ {Fmt.Number(def.BatasMingguKg, 0)} kg CO₂";
+            LastBadgeDescription = $"Minggu lalu total emisi yang kamu hasilkan\n{limit}";
+            return;
+        }
+
+        // Tanpa badge: perisai terkunci.
+        LastBadgeIcon = AssetUri.Of(BadgeCatalog.All[0].LockedIconUri);
+        LastBadgeName = "Belum ada badge";
+        LastBadgeDescription = record is null
+            ? "Belum ada data untuk minggu lalu"
+            : $"Minggu lalu total emisimu {Fmt.Number(record.TotalEmisiKg, 2)} kg CO₂";
+    }
+
+    private void ShowShelf(IReadOnlyList<WeeklyBadgeRecord> earned)
+    {
+        var levels = earned.Where(r => r.Badge != BadgeLevel.None).Select(r => r.Badge).ToHashSet();
+
+        Shelf.Clear();
+        foreach (var def in BadgeCatalog.All)
+        {
+            var isEarned = levels.Contains(def.Level);
+            Shelf.Add(new BadgeShelfItem(
+                def.Nama,
+                def.BatasLabel,
+                AssetUri.Of(isEarned ? def.IconUri : def.LockedIconUri),
+                isEarned));
+        }
+    }
+
+    public void Dispose()
+    {
+        _disposed = true;
+        _timer.Stop();
     }
 }

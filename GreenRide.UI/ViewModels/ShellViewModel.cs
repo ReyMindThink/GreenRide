@@ -1,61 +1,95 @@
-using System.Collections.ObjectModel;
+using System.Diagnostics;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using GreenRide.UI.Helpers;
 using GreenRide.UI.Models;
 using GreenRide.UI.Services;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace GreenRide.UI.ViewModels;
 
-public partial class ShellViewModel : ViewModelBase
+/// <summary>Kerangka setelah login: sidebar + halaman aktif.</summary>
+public sealed partial class ShellViewModel : ViewModelBase, INavigationAware
 {
-    private readonly Action _onLogout;
+    private readonly IServiceProvider _services;
+    private readonly ISessionService _session;
+    private readonly INavigationService _navigation;
 
-    public AccountInfo Account { get; }
-    public DashboardViewModel Dashboard { get; }
-    public CatatViewModel Catat { get; }
-    public RingkasanViewModel Ringkasan { get; }
-    public ObservableCollection<NavItem> NavItems { get; }
+    private readonly NavItem _catat;
+    private readonly NavItem _leaderboard;
+    private readonly NavItem _ringkasan;
 
-    [ObservableProperty] private PageViewModelBase _currentPage;
-
-    /// <summary>Diisi ShellView berdasarkan lebar jendela: true → navigasi samping + 2 kolom.</summary>
-    [ObservableProperty] private bool _isWide;
-
-    public ShellViewModel(IGreenRideRepository repo, AccountInfo account, Action onLogout)
+    public ShellViewModel(IServiceProvider services, ISessionService session, INavigationService navigation)
     {
-        Account = account;
-        _onLogout = onLogout;
+        _services = services;
+        _session = session;
+        _navigation = navigation;
 
-        var gami = new GamificationService(repo);
-        Dashboard = new DashboardViewModel(repo, gami, account);
-        Catat = new CatatViewModel(repo, gami, account);
-        Ringkasan = new RingkasanViewModel(repo, gami, account);
-        Dashboard.RequestCatat = () => Select(NavItems[1]);
+        _catat = new NavItem("CATAT", IconResources.Get("Icon.Catat"), ShowCatat);
+        _leaderboard = new NavItem("LEADERBOARD", IconResources.Get("Icon.Trophy"), ShowLeaderboard);
+        _ringkasan = new NavItem("RINGKASAN", IconResources.Get("Icon.Ringkasan"), ShowRingkasan);
+        NavItems = new[] { _catat, _leaderboard, _ringkasan };
+        KeluarIcon = IconResources.Get("Icon.Keluar");
+    }
 
-        NavItems = new ObservableCollection<NavItem>
+    public IReadOnlyList<NavItem> NavItems { get; }
+    public Avalonia.Media.Geometry? KeluarIcon { get; }
+
+    [ObservableProperty] private ViewModelBase? _currentPage;
+
+    public Task OnNavigatedToAsync()
+    {
+        ShowCatat();
+        return Task.CompletedTask;
+    }
+
+    private void ShowCatat() => Show(_services.GetRequiredService<CatatViewModel>(), _catat);
+
+    private void ShowLeaderboard() => Show(_services.GetRequiredService<LeaderboardViewModel>(), _leaderboard);
+
+    private void ShowRingkasan()
+    {
+        var vm = _services.GetRequiredService<RingkasanViewModel>();
+        vm.OnRevise = ShowRevisi;
+        Show(vm, _ringkasan);
+    }
+
+    // Revisi dibuka dari baris tabel di Ringkasan, jadi menu "Ringkasan" tetap menyala.
+    private void ShowRevisi(TripLog log)
+    {
+        var vm = _services.GetRequiredService<RevisiViewModel>();
+        vm.Initialize(log, ShowRingkasan);
+        Show(vm, _ringkasan);
+    }
+
+    private void Show(ViewModelBase page, NavItem active)
+    {
+        (CurrentPage as IDisposable)?.Dispose();
+        CurrentPage = page;
+        foreach (var item in NavItems) item.IsActive = ReferenceEquals(item, active);
+
+        if (page is INavigationAware aware)
+            _ = RunAsync(aware);
+    }
+
+    private static async Task RunAsync(INavigationAware aware)
+    {
+        try
         {
-            new("Beranda",   "🏠", Dashboard, Select),
-            new("Catat",     "➕", Catat,     Select),
-            new("Ringkasan", "📊", Ringkasan, Select),
-        };
-
-        _currentPage = Dashboard;
-        Select(NavItems[0]);
+            await aware.OnNavigatedToAsync();
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[Shell] {ex}");
+        }
     }
 
-    private void Select(NavItem item)
+    [RelayCommand]
+    private void SignOut()
     {
-        foreach (var n in NavItems) n.IsSelected = n == item;
-        CurrentPage = item.Page;
-        item.Page.OnNavigatedTo();
+        (CurrentPage as IDisposable)?.Dispose();
+        CurrentPage = null;
+        _session.SignOut();
+        _navigation.NavigateTo<IntroViewModel>();
     }
-
-    partial void OnIsWideChanged(bool value)
-    {
-        Dashboard.IsWide = value;
-        Catat.IsWide = value;
-        Ringkasan.IsWide = value;
-    }
-
-    [RelayCommand] private void Keluar() => _onLogout();
 }

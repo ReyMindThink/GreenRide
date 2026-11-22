@@ -1,0 +1,40 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <!-- Palet diambil dari file desain Figma -->
+
+  <!-- Latar & merek -->
+  <SolidColorBrush x:Key="BrandBgBrush" Color="#D1EBA4" />
+  <SolidColorBrush x:Key="BrandSoftBrush" Color="#D9F6B3" />
+  <SolidColorBrush x:Key="AccentYellowBrush" Color="#FFE461" />
+
+  <!-- Permukaan -->
+  <SolidColorBrush x:Key="SurfaceBrush" Color="#FFFFFF" />
+  <SolidColorBrush x:Key="SurfaceSoftBrush" Color="#F3F8EA" />
+  <SolidColorBrush x:Key="SurfaceMutedBrush" Color="#F0F1ED" />
+  <SolidColorBrush x:Key="DividerBrush" Color="#E8EAF6" />
+  <SolidColorBrush x:Key="BorderSoftBrush" Color="#DCE4D2" />
+  <SolidColorBrush x:Key="InputBgBrush" Color="#F5F5F5" />
+  <SolidColorBrush x:Key="NoteBgBrush" Color="#FFF6DA" />
+
+  <!-- Teks -->
+  <SolidColorBrush x:Key="InkBrush" Color="#111111" />
+  <SolidColorBrush x:Key="InkHoverBrush" Color="#2B2B2B" />
+  <SolidColorBrush x:Key="InkSoftBrush" Color="#4B4B4B" />
+  <SolidColorBrush x:Key="TextGrayBrush" Color="#6B6B6B" />
+  <SolidColorBrush x:Key="TextMutedBrush" Color="#58634D" />
+  <SolidColorBrush x:Key="ForestBrush" Color="#354A20" />
+  <SolidColorBrush x:Key="ErrorBrush" Color="#B3261E" />
+
+  <!-- Warna kalender emisi -->
+  <SolidColorBrush x:Key="CalGoodBrush" Color="#D1EBA4" />
+  <SolidColorBrush x:Key="CalAverageBrush" Color="#FFF0B3" />
+  <SolidColorBrush x:Key="CalHighBrush" Color="#FFD7D1" />
+  <SolidColorBrush x:Key="CalNoneBrush" Color="#F0F1ED" />
+
+  <!-- Radius -->
+  <CornerRadius x:Key="RadiusCard">12</CornerRadius>
+  <CornerRadius x:Key="RadiusItem">8</CornerRadius>
+  <CornerRadius x:Key="RadiusPill">6</CornerRadius>
+
+</ResourceDictionary>

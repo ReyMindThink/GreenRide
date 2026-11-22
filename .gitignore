@@ -1,7 +1,5 @@
-[Bb]in/
-[Oo]bj/
-.vs/
-.vscode/
-*.user
-*.suo
-project.lock.json
+
+.DS_Store
+**/.DS_Store
+bin/
+obj/
