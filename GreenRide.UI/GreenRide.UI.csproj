@@ -2,13 +2,13 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <!-- Samakan dengan TargetFramework di GreenRide.csproj (net8.0 / net9.0 dst.) -->
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <LangVersion>latest</LangVersion>
     <RootNamespace>GreenRide.UI</RootNamespace>
-    <AvaloniaUseCompiledBindingsByDefault>false</AvaloniaUseCompiledBindingsByDefault>
+    <AssemblyName>GreenRide.UI</AssemblyName>
+    <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
   </PropertyGroup>
 
   <ItemGroup>
@@ -16,14 +16,14 @@
     <PackageReference Include="Avalonia.Desktop" Version="11.2.3" />
     <PackageReference Include="Avalonia.Themes.Fluent" Version="11.2.3" />
     <PackageReference Include="Avalonia.Fonts.Inter" Version="11.2.3" />
-    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.2" />
-    <PackageReference Include="LiveChartsCore.SkiaSharpView.Avalonia" Version="2.0.0-rc5.4" />
-    <PackageReference Include="Npgsql" Version="10.0.3" />
+    <PackageReference Include="Avalonia.Svg.Skia" Version="11.2.0" />
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.3.2" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.1" />
+    <PackageReference Condition="'$(Configuration)' == 'Debug'" Include="Avalonia.Diagnostics" Version="11.2.3" />
   </ItemGroup>
 
   <ItemGroup>
-    <!-- Backend (Models: DailyLog, TransportMode, UserBadge) dipakai langsung, tanpa diubah -->
-    <ProjectReference Include="..\GreenRide.csproj" />
+    <AvaloniaResource Include="Assets/**" />
   </ItemGroup>
 
 </Project>

@@ -1,0 +1,63 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <!-- Kolom input abu membulat. Pakai: <TextBox Classes="gr" /> -->
+  <Style Selector="TextBox.gr">
+    <Setter Property="Height" Value="44" />
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="Padding" Value="14,0" />
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="Foreground" Value="{DynamicResource InkBrush}" />
+    <Style.Resources>
+      <SolidColorBrush x:Key="TextControlBackground" Color="#F5F5F5" />
+      <SolidColorBrush x:Key="TextControlBackgroundPointerOver" Color="#F5F5F5" />
+      <SolidColorBrush x:Key="TextControlBackgroundFocused" Color="#F5F5F5" />
+      <SolidColorBrush x:Key="TextControlBackgroundDisabled" Color="#EDEDED" />
+      <SolidColorBrush x:Key="TextControlBorderBrush" Color="Transparent" />
+      <SolidColorBrush x:Key="TextControlBorderBrushPointerOver" Color="Transparent" />
+      <SolidColorBrush x:Key="TextControlBorderBrushFocused" Color="#354A20" />
+      <SolidColorBrush x:Key="TextControlPlaceholderForeground" Color="#6B6B6B" />
+      <SolidColorBrush x:Key="TextControlPlaceholderForegroundPointerOver" Color="#6B6B6B" />
+      <SolidColorBrush x:Key="TextControlPlaceholderForegroundFocused" Color="#6B6B6B" />
+      <Thickness x:Key="TextControlBorderThemeThickness">1.5</Thickness>
+      <Thickness x:Key="TextControlBorderThemeThicknessFocused">1.5</Thickness>
+    </Style.Resources>
+  </Style>
+
+  <!-- Input tidak valid: garis tepi merah (class "invalid" diatur lewat binding / PasswordBox.IsInvalid) -->
+  <Style Selector="TextBox.gr.invalid">
+    <Style.Resources>
+      <SolidColorBrush x:Key="TextControlBorderBrush" Color="#B3261E" />
+      <SolidColorBrush x:Key="TextControlBorderBrushPointerOver" Color="#B3261E" />
+      <SolidColorBrush x:Key="TextControlBorderBrushFocused" Color="#B3261E" />
+    </Style.Resources>
+  </Style>
+
+  <!-- Tombol mata di dalam PasswordBox -->
+  <Style Selector="ToggleButton.eye">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="CornerRadius" Value="18" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="Cursor" Value="Hand" />
+  </Style>
+  <Style Selector="ToggleButton.eye /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+  <Style Selector="ToggleButton.eye:checked /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+  <Style Selector="ToggleButton.eye:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="#14000000" />
+  </Style>
+  <Style Selector="ToggleButton.eye:checked:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="#14000000" />
+  </Style>
+  <Style Selector="ToggleButton.eye:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="#1F000000" />
+  </Style>
+
+</Styles>

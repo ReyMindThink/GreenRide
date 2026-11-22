@@ -1,0 +1,66 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <!-- Kartu putih besar -->
+  <Style Selector="Border.card">
+    <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusCard}" />
+    <Setter Property="Padding" Value="20" />
+  </Style>
+
+  <!-- Panel hijau muda kecil di dalam kartu -->
+  <Style Selector="Border.soft">
+    <Setter Property="Background" Value="{DynamicResource SurfaceSoftBrush}" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusItem}" />
+    <Setter Property="Padding" Value="12,10" />
+  </Style>
+
+  <!-- Leaderboard: juara 1 dan baris milik pengguna berwarna hijau -->
+  <Style Selector="Border.soft.first, Border.soft.me">
+    <Setter Property="Background" Value="{DynamicResource BrandBgBrush}" />
+  </Style>
+
+  <!-- Catatan kuning ("Revisi hanya tersedia untuk perjalanan hari ini") -->
+  <Style Selector="Border.note">
+    <Setter Property="Background" Value="{DynamicResource NoteBgBrush}" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusItem}" />
+    <Setter Property="Padding" Value="12,10" />
+  </Style>
+
+  <!-- Kartu moda (Motor / Mobil / Bus / Kereta): tombol putih berbingkai; hijau saat aktif, redup saat disabled -->
+  <Style Selector="Button.moda">
+    <Setter Property="Height" Value="242" />
+    <Setter Property="Margin" Value="8" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="CornerRadius" Value="10" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="BorderBrush" Value="#F5F5F5" />
+    <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="VerticalContentAlignment" Value="Stretch" />
+    <Setter Property="Cursor" Value="Hand" />
+  </Style>
+  <Style Selector="Button.moda /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+    <Setter Property="BorderBrush" Value="#F5F5F5" />
+  </Style>
+  <Style Selector="Button.moda:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource SurfaceSoftBrush}" />
+    <Setter Property="BorderBrush" Value="#F5F5F5" />
+  </Style>
+  <Style Selector="Button.moda.active /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource BrandBgBrush}" />
+  </Style>
+  <Style Selector="Button.moda.active:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource BrandBgBrush}" />
+  </Style>
+  <Style Selector="Button.moda:disabled">
+    <Setter Property="Opacity" Value="0.45" />
+  </Style>
+  <Style Selector="Button.moda:disabled /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+    <Setter Property="BorderBrush" Value="#F5F5F5" />
+  </Style>
+
+</Styles>

@@ -1,118 +1,277 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:c="using:GreenRide.UI.Controls"
-             xmlns:lvc="using:LiveChartsCore.SkiaSharpView.Avalonia"
-             x:Class="GreenRide.UI.Views.RingkasanView">
-  <ScrollViewer>
-    <StackPanel Margin="20" Spacing="16">
+             xmlns:vm="using:GreenRide.UI.ViewModels"
+             xmlns:svg="clr-namespace:Avalonia.Svg.Skia;assembly=Avalonia.Svg.Skia"
+             x:Class="GreenRide.UI.Views.RingkasanView"
+             x:DataType="vm:RingkasanViewModel">
 
-      <StackPanel>
-        <TextBlock Text="Ringkasan" Classes="h1" />
-        <TextBlock Text="Emisi mingguan, kalender harian, dan revisi catatan" Classes="muted" />
-      </StackPanel>
+  <UserControl.Resources>
+    <x:Double x:Key="TitleSize">32</x:Double>
+    <x:Double x:Key="BarWidth">44</x:Double>
+    <x:Double x:Key="BigValueSize">28</x:Double>
+    <Thickness x:Key="CardPadding">20</Thickness>
 
-      <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto">
+    <!-- Baris tabel (lebar): satu baris per perjalanan, kolom sejajar dengan header. -->
+    <DataTemplate x:Key="WideRow" x:DataType="vm:TripRowItem">
+      <Border Classes="soft" Padding="12,0" Height="44" Margin="0,0,0,4">
+        <Grid ColumnDefinitions="2.2*,2*,1.2*,1.4*,1.3*,96" VerticalAlignment="Center">
+          <StackPanel Orientation="Horizontal" Spacing="10">
+            <svg:Svg Path="{Binding IconUri}" Width="28" Height="24" />
+            <TextBlock Text="{Binding ModeName}" FontSize="14" FontWeight="Bold" VerticalAlignment="Center" />
+          </StackPanel>
+          <TextBlock Grid.Column="1" Text="{Binding TimeText}" FontSize="14" FontWeight="SemiBold"
+                     VerticalAlignment="Center" />
+          <TextBlock Grid.Column="2" Text="{Binding DurasiText}" FontSize="13" VerticalAlignment="Center"
+                     Foreground="{DynamicResource TextGrayBrush}" />
+          <TextBlock Grid.Column="3" Text="{Binding EmisiText}" FontSize="14" FontWeight="Bold"
+                     VerticalAlignment="Center" Foreground="{DynamicResource ForestBrush}" />
+          <TextBlock Grid.Column="4" Text="{Binding StatusText}" FontSize="13" VerticalAlignment="Center" />
+          <Button Grid.Column="5" Classes="soft" Content="Revisi" Height="32" Padding="0"
+                  FontSize="12" HorizontalAlignment="Stretch"
+                  Command="{Binding ReviseCommand}" IsVisible="{Binding CanRevise}" />
+        </Grid>
+      </Border>
+    </DataTemplate>
 
-        <!-- ===== Grafik emisi rekap mingguan ===== -->
-        <Border Classes="card" Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="{Binding Span}" Margin="{Binding FirstMargin}" VerticalAlignment="Top">
-          <StackPanel Spacing="8">
-            <Grid ColumnDefinitions="Auto,*,Auto">
-              <Button Grid.Column="0" Classes="chip" Content="◀" Command="{Binding PrevWeekCommand}" />
-              <StackPanel Grid.Column="1" HorizontalAlignment="Center">
-                <TextBlock Text="Emisi Mingguan" Classes="h2" HorizontalAlignment="Center" />
-                <TextBlock Text="{Binding WeekLabel}" Classes="muted" FontSize="12" HorizontalAlignment="Center" />
-              </StackPanel>
-              <Button Grid.Column="2" Classes="chip" Content="▶" Command="{Binding NextWeekCommand}" />
+    <!-- Baris tabel (sempit): dua baris per perjalanan. -->
+    <DataTemplate x:Key="NarrowRow" x:DataType="vm:TripRowItem">
+      <Border Classes="soft" Padding="12,10" Margin="0,0,0,6">
+        <Grid ColumnDefinitions="Auto,*,Auto" RowDefinitions="Auto,Auto">
+          <svg:Svg Grid.RowSpan="2" Path="{Binding IconUri}" Width="30" Height="26"
+                   VerticalAlignment="Center" Margin="0,0,10,0" />
+          <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding ModeName}" FontSize="14" FontWeight="Bold"
+                     TextWrapping="Wrap" />
+          <TextBlock Grid.Row="0" Grid.Column="2" Text="{Binding EmisiText}" FontSize="14" FontWeight="Bold"
+                     Foreground="{DynamicResource ForestBrush}" HorizontalAlignment="Right" Margin="10,0,0,0" />
+          <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding DetailText}" FontSize="12"
+                     TextWrapping="Wrap" Foreground="{DynamicResource TextGrayBrush}" Margin="0,2,0,0" />
+          <Button Grid.Row="1" Grid.Column="2" Classes="soft" Content="Revisi" Height="30"
+                  Padding="14,0" FontSize="12" Command="{Binding ReviseCommand}"
+                  IsVisible="{Binding CanRevise}" Margin="10,2,0,0" />
+        </Grid>
+      </Border>
+    </DataTemplate>
+  </UserControl.Resources>
+
+  <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+    <StackPanel Spacing="16">
+
+      <!-- Judul + pemilih bulan -->
+      <Grid x:Name="HeaderGrid" ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto">
+        <TextBlock Grid.Row="0" Grid.Column="0" Classes="h1" Text="RINGKASAN"
+                   FontSize="{DynamicResource TitleSize}" VerticalAlignment="Center" />
+        <Border x:Name="MonthNav" Grid.Row="0" Grid.Column="1" Background="{DynamicResource SurfaceBrush}"
+                CornerRadius="8" MinWidth="232" Margin="0,0,0,12">
+          <Grid ColumnDefinitions="Auto,*,Auto">
+            <Button Classes="ghost" Command="{Binding PreviousMonthCommand}" ToolTip.Tip="Bulan sebelumnya">
+              <Path Classes="icon" Data="{DynamicResource Icon.ChevronLeft}" Width="14" Height="14" />
+            </Button>
+            <TextBlock Grid.Column="1" Text="{Binding MonthLabel}" FontSize="14" FontWeight="Bold"
+                       HorizontalAlignment="Center" VerticalAlignment="Center" />
+            <Button Grid.Column="2" Classes="ghost" Command="{Binding NextMonthCommand}"
+                    ToolTip.Tip="Bulan berikutnya">
+              <Path Classes="icon" Data="{DynamicResource Icon.ChevronRight}" Width="14" Height="14" />
+            </Button>
+          </Grid>
+        </Border>
+      </Grid>
+
+      <TextBlock Classes="error" Text="{Binding ErrorMessage}" TextWrapping="Wrap"
+                 IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+
+      <Grid x:Name="Root" ColumnDefinitions="520*,424*" RowDefinitions="Auto,Auto,Auto">
+
+        <!-- Emisi mingguan -->
+        <Border x:Name="ChartCard" Grid.Row="0" Grid.Column="0" Classes="card"
+                Padding="{DynamicResource CardPadding}" Margin="4,0,4,16">
+          <StackPanel>
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBlock Classes="h2" Text="Emisi mingguan" />
+              <TextBlock Grid.Column="1" Classes="muted" Text="kg CO₂" VerticalAlignment="Center" />
             </Grid>
 
-            <lvc:CartesianChart Series="{Binding Series}" XAxes="{Binding XAxes}" YAxes="{Binding YAxes}" Height="230" />
+            <Grid x:Name="SummaryGrid" ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" Margin="0,16,0,0">
+              <StackPanel x:Name="TotalBlock" Grid.Row="0" Grid.Column="0" VerticalAlignment="Center" Margin="0,0,0,12">
+                <TextBlock Text="{Binding MonthTotalText}" FontSize="{DynamicResource BigValueSize}"
+                           FontWeight="ExtraBold" TextWrapping="Wrap" />
+                <TextBlock Classes="muted" Text="{Binding MonthTotalCaption}" TextWrapping="Wrap" />
+              </StackPanel>
+              <Border x:Name="ComparePanel" Grid.Row="0" Grid.Column="1" Classes="soft"
+                      Classes.note="{Binding CompareIsHigher}" MinWidth="224" Padding="14,10" Margin="0,0,0,12">
+                <StackPanel Spacing="2">
+                  <TextBlock Text="{Binding CompareTitle}" FontSize="14" FontWeight="Bold"
+                             Foreground="{DynamicResource ForestBrush}" TextWrapping="Wrap" />
+                  <TextBlock Classes="muted" Text="{Binding CompareSubtitle}" TextWrapping="Wrap" />
+                </StackPanel>
+              </Border>
+            </Grid>
 
-            <TextBlock Text="{Binding WeekTotalText}" Classes="big" HorizontalAlignment="Center" FontSize="26" />
-            <TextBlock Text="{Binding WeekBadgeText}" Classes="muted" HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center" />
+            <!-- Grafik batang. Area plot 160 px + 20 px ruang untuk angka di atas batang tertinggi. -->
+            <Grid ColumnDefinitions="30,*" Margin="0,20,0,0">
+              <Grid Height="180" VerticalAlignment="Top" RowDefinitions="20,*,*,*,*">
+                <TextBlock Grid.Row="1" Classes="caption" Text="{Binding Axis4}" VerticalAlignment="Top"
+                           Margin="0,-8,0,0" />
+                <TextBlock Grid.Row="2" Classes="caption" Text="{Binding Axis3}" VerticalAlignment="Top"
+                           Margin="0,-8,0,0" />
+                <TextBlock Grid.Row="3" Classes="caption" Text="{Binding Axis2}" VerticalAlignment="Top"
+                           Margin="0,-8,0,0" />
+                <TextBlock Grid.Row="4" Classes="caption" Text="{Binding Axis1}" VerticalAlignment="Top"
+                           Margin="0,-8,0,0" />
+                <TextBlock Grid.Row="4" Classes="caption" Text="{Binding Axis0}" VerticalAlignment="Bottom"
+                           Margin="0,0,0,-8" />
+              </Grid>
+
+              <Grid Grid.Column="1" Height="180" VerticalAlignment="Top" RowDefinitions="20,*">
+                <Grid Grid.Row="1" RowDefinitions="*,*,*,*">
+                  <Border BorderBrush="{DynamicResource DividerBrush}" BorderThickness="0,1,0,0" />
+                  <Border Grid.Row="1" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="0,1,0,0" />
+                  <Border Grid.Row="2" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="0,1,0,0" />
+                  <Border Grid.Row="3" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="0,1,0,1" />
+                </Grid>
+              </Grid>
+
+              <ItemsControl Grid.Column="1" ItemsSource="{Binding Bars}">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate>
+                    <UniformGrid Rows="1" />
+                  </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:WeekBarItem">
+                    <Grid RowDefinitions="180,Auto">
+                      <StackPanel VerticalAlignment="Bottom" Spacing="4" IsVisible="{Binding Started}">
+                        <TextBlock Text="{Binding ValueText}" FontSize="12" FontWeight="Bold"
+                                   Foreground="{DynamicResource ForestBrush}" HorizontalAlignment="Center" />
+                        <Border Classes="bar" Classes.current="{Binding IsCurrent}"
+                                Height="{Binding BarHeight}" Width="{DynamicResource BarWidth}"
+                                HorizontalAlignment="Center" />
+                      </StackPanel>
+                      <TextBlock Text="{Binding ValueText}" Classes="caption" TextAlignment="Center"
+                                 TextWrapping="Wrap" HorizontalAlignment="Center" VerticalAlignment="Bottom"
+                                 Margin="2,0,2,10" IsVisible="{Binding !Started}" />
+                      <TextBlock Grid.Row="1" Text="{Binding Label}" FontSize="12"
+                                 HorizontalAlignment="Center" Margin="0,10,0,0" />
+                    </Grid>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </Grid>
+
+            <Border Classes="soft" Margin="0,20,0,0" Padding="12,10">
+              <StackPanel Spacing="2">
+                <TextBlock Text="Semakin rendah emisi, semakin baik!" FontSize="12" FontWeight="Bold"
+                           Foreground="{DynamicResource ForestBrush}" TextWrapping="Wrap" />
+                <TextBlock Classes="muted" Text="Catatan dimulai dari hari Senin" TextWrapping="Wrap" />
+              </StackPanel>
+            </Border>
           </StackPanel>
         </Border>
 
-        <!-- ===== Kalender detail harian ===== -->
-        <Border Classes="card" Grid.Row="{Binding SecondRow}" Grid.Column="{Binding SecondColumn}" Grid.ColumnSpan="{Binding Span}" Margin="{Binding SecondMargin}" VerticalAlignment="Top">
-          <StackPanel Spacing="8">
-            <Grid ColumnDefinitions="Auto,*,Auto">
-              <Button Grid.Column="0" Classes="chip" Content="◀" Command="{Binding PrevMonthCommand}" />
-              <TextBlock Grid.Column="1" Text="{Binding MonthLabel}" Classes="h2" HorizontalAlignment="Center" VerticalAlignment="Center" />
-              <Button Grid.Column="2" Classes="chip" Content="▶" Command="{Binding NextMonthCommand}" />
+        <!-- Kalender emisi -->
+        <Border x:Name="CalendarCard" Grid.Row="0" Grid.Column="1" Classes="card"
+                Padding="{DynamicResource CardPadding}" Margin="4,0,4,16">
+          <StackPanel>
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBlock Classes="h2" Text="Kalender emisi" />
+              <TextBlock Grid.Column="1" Classes="muted" Text="{Binding MonthName}" VerticalAlignment="Center" />
             </Grid>
 
-            <ItemsControl ItemsSource="{Binding WeekdayNames}">
+            <UniformGrid Columns="7" Margin="0,16,0,6">
+              <TextBlock Classes="muted" Text="Sen" TextAlignment="Center" />
+              <TextBlock Classes="muted" Text="Sel" TextAlignment="Center" />
+              <TextBlock Classes="muted" Text="Rab" TextAlignment="Center" />
+              <TextBlock Classes="muted" Text="Kam" TextAlignment="Center" />
+              <TextBlock Classes="muted" Text="Jum" TextAlignment="Center" />
+              <TextBlock Classes="muted" Text="Sab" TextAlignment="Center" />
+              <TextBlock Classes="muted" Text="Min" TextAlignment="Center" />
+            </UniformGrid>
+
+            <ItemsControl ItemsSource="{Binding Cells}">
               <ItemsControl.ItemsPanel>
-                <ItemsPanelTemplate><UniformGrid Rows="1" /></ItemsPanelTemplate>
+                <ItemsPanelTemplate>
+                  <UniformGrid Columns="7" />
+                </ItemsPanelTemplate>
               </ItemsControl.ItemsPanel>
               <ItemsControl.ItemTemplate>
-                <DataTemplate>
-                  <TextBlock Text="{Binding}" Classes="muted" FontWeight="Bold" FontSize="12" HorizontalAlignment="Center" />
+                <DataTemplate x:DataType="vm:CalendarCellItem">
+                  <Button Classes="cal"
+                          Classes.good="{Binding IsGood}" Classes.avg="{Binding IsAverage}"
+                          Classes.high="{Binding IsHigh}" Classes.none="{Binding IsNone}"
+                          Classes.sel="{Binding IsSelected}" Classes.today="{Binding IsToday}"
+                          Content="{Binding Text}" Command="{Binding Command}"
+                          IsVisible="{Binding IsNotBlank}" />
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>
 
-            <ItemsControl ItemsSource="{Binding Days}">
-              <ItemsControl.ItemsPanel>
-                <ItemsPanelTemplate><UniformGrid Columns="7" /></ItemsPanelTemplate>
-              </ItemsControl.ItemsPanel>
-              <ItemsControl.ItemTemplate>
-                <DataTemplate>
-                  <Button Classes="day" Classes.sel="{Binding IsSelected}" Classes.today="{Binding IsToday}"
-                          Background="{Binding Fill}" Opacity="{Binding CellOpacity}"
-                          Command="{Binding $parent[ItemsControl].DataContext.SelectDayCommand}"
-                          CommandParameter="{Binding}">
-                    <StackPanel Spacing="0">
-                      <TextBlock Text="{Binding DayText}" FontWeight="Bold" FontSize="14" HorizontalAlignment="Center" />
-                      <TextBlock Text="{Binding Emojis}" FontSize="12" HorizontalAlignment="Center" MinHeight="16" />
-                    </StackPanel>
-                  </Button>
-                </DataTemplate>
-              </ItemsControl.ItemTemplate>
-            </ItemsControl>
+            <Grid ColumnDefinitions="*,Auto" Margin="0,16,0,0">
+              <TextBlock Text="{Binding SelectedDayLabel}" FontSize="12" FontWeight="Bold"
+                         Foreground="{DynamicResource ForestBrush}" TextWrapping="Wrap" />
+              <TextBlock Grid.Column="1" Text="{Binding SelectedDayTotal}" FontSize="12" FontWeight="Bold"
+                         Foreground="{DynamicResource ForestBrush}" Margin="12,0,0,0" />
+            </Grid>
 
-            <WrapPanel HorizontalAlignment="Center">
-              <TextBlock Text="🟩 ≤ 0,5 kg" FontSize="11" Classes="muted" Margin="6,2" />
-              <TextBlock Text="🟨 ≤ 2 kg" FontSize="11" Classes="muted" Margin="6,2" />
-              <TextBlock Text="🟧 &gt; 2 kg" FontSize="11" Classes="muted" Margin="6,2" />
-            </WrapPanel>
+            <!-- Legenda -->
+            <UniformGrid Columns="2" Margin="0,14,0,0">
+              <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,8">
+                <Border Width="12" Height="12" CornerRadius="3" Background="{DynamicResource CalGoodBrush}" VerticalAlignment="Center" />
+                <TextBlock Classes="muted" Text="≤ 0,43 kg" />
+              </StackPanel>
+              <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,8">
+                <Border Width="12" Height="12" CornerRadius="3" Background="{DynamicResource CalAverageBrush}" VerticalAlignment="Center" />
+                <TextBlock Classes="muted" Text="&gt; 0,43–1,43 kg" />
+              </StackPanel>
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <Border Width="12" Height="12" CornerRadius="3" Background="{DynamicResource CalHighBrush}" VerticalAlignment="Center" />
+                <TextBlock Classes="muted" Text="&gt; 1,43 kg" />
+              </StackPanel>
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <Border Width="12" Height="12" CornerRadius="3" Background="{DynamicResource CalNoneBrush}" VerticalAlignment="Center" />
+                <TextBlock Classes="muted" Text="Tanpa catatan" />
+              </StackPanel>
+            </UniformGrid>
+          </StackPanel>
+        </Border>
+
+        <!-- Catatan perjalanan -->
+        <Border x:Name="TripsCard" Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Classes="card"
+                Padding="{DynamicResource CardPadding}" Margin="4,0,4,0">
+          <StackPanel>
+            <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto">
+              <TextBlock Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Classes="h2"
+                         Text="{Binding TripsTitle}" TextWrapping="Wrap" />
+              <TextBlock x:Name="TripsSubtitleText" Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
+                         Classes="muted" Text="{Binding TripsSubtitle}" TextWrapping="Wrap"
+                         Margin="0,4,0,0" />
+            </Grid>
+
+            <!-- Header kolom (hanya tampilan lebar) -->
+            <Grid x:Name="TripHeader" ColumnDefinitions="2.2*,2*,1.2*,1.4*,1.3*,96" Margin="12,14,12,8">
+              <TextBlock Classes="muted" Text="Moda" />
+              <TextBlock Grid.Column="1" Classes="muted" Text="Mulai–selesai" />
+              <TextBlock Grid.Column="2" Classes="muted" Text="Durasi" />
+              <TextBlock Grid.Column="3" Classes="muted" Text="Emisi CO₂" />
+              <TextBlock Grid.Column="4" Classes="muted" Text="Status" />
+            </Grid>
+
+            <ItemsControl x:Name="TripList" ItemsSource="{Binding Rows}" Margin="0,8,0,0" />
+
+            <TextBlock Classes="muted" Text="Belum ada perjalanan tercatat pada tanggal ini." Margin="0,12,0,4"
+                       TextWrapping="Wrap" IsVisible="{Binding !HasTrips}" />
+
+            <Border Classes="note" Margin="0,8,0,0" IsVisible="{Binding ShowPastNote}">
+              <StackPanel Spacing="2">
+                <TextBlock Text="Revisi hanya tersedia untuk perjalanan hari ini." FontSize="12" FontWeight="Bold"
+                           Foreground="{DynamicResource ForestBrush}" TextWrapping="Wrap" />
+                <TextBlock Classes="muted" Text="Tanggal sebelumnya tidak dapat diubah." TextWrapping="Wrap" />
+              </StackPanel>
+            </Border>
           </StackPanel>
         </Border>
 
       </Grid>
 
-      <!-- ===== Detail hari terpilih + tombol revisi waktu (rentang 1 hari) ===== -->
-      <Border Classes="card">
-        <StackPanel Spacing="10">
-          <TextBlock Text="{Binding DayTitle}" Classes="h2" />
-          <TextBlock Text="{Binding DayTotalText}" Classes="muted" />
-
-          <ItemsControl ItemsSource="{Binding SelectedLogs}">
-            <ItemsControl.ItemTemplate>
-              <DataTemplate>
-                <Border Background="#F1F8E9" CornerRadius="14" Padding="12" Margin="0,4">
-                  <Grid ColumnDefinitions="Auto,*,Auto">
-                    <TextBlock Text="{Binding Emoji}" FontSize="28" VerticalAlignment="Center" Margin="0,0,12,0" />
-                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                      <TextBlock Text="{Binding ModaNama}" FontWeight="Bold" />
-                      <TextBlock Classes="muted" FontSize="12">
-                        <Run Text="{Binding DurasiText}" /><Run Text=" menit · " /><Run Text="{Binding EmisiText}" />
-                      </TextBlock>
-                    </StackPanel>
-                    <Button Grid.Column="2" Classes="chip" Content="✏️ Revisi" VerticalAlignment="Center"
-                            IsVisible="{Binding CanRevise}"
-                            Command="{Binding $parent[ItemsControl].DataContext.MulaiRevisiCommand}"
-                            CommandParameter="{Binding}" />
-                    <TextBlock Grid.Column="2" Text="🔒 Lewat 1 hari" Classes="muted" FontSize="12" VerticalAlignment="Center"
-                               IsVisible="{Binding !CanRevise}" />
-                  </Grid>
-                </Border>
-              </DataTemplate>
-            </ItemsControl.ItemTemplate>
-          </ItemsControl>
-        </StackPanel>
-      </Border>
-
     </StackPanel>
   </ScrollViewer>
+
 </UserControl>

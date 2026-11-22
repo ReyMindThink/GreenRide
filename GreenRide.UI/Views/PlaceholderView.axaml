@@ -1,0 +1,13 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:GreenRide.UI.ViewModels"
+             x:Class="GreenRide.UI.Views.PlaceholderView"
+             x:DataType="vm:PlaceholderViewModel">
+
+  <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12" Margin="24">
+    <TextBlock Classes="h2" Text="{Binding Title}" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" />
+    <TextBlock Classes="muted" Text="{Binding Message}" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" />
+    <Button Classes="outline" Content="{Binding BackLabel}" Command="{Binding BackCommand}" HorizontalAlignment="Center" />
+  </StackPanel>
+
+</UserControl>

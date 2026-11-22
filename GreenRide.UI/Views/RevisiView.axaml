@@ -1,32 +1,160 @@
-<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Class="GreenRide.UI.Views.RevisiView">
-  <ScrollViewer>
-    <StackPanel Margin="20" Spacing="16" MaxWidth="480" HorizontalAlignment="Left">
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:GreenRide.UI.ViewModels"
+             xmlns:svg="clr-namespace:Avalonia.Svg.Skia;assembly=Avalonia.Svg.Skia"
+             x:Class="GreenRide.UI.Views.RevisiView"
+             x:DataType="vm:RevisiViewModel">
 
-      <StackPanel>
-        <TextBlock Text="Revisi Perjalanan" Classes="h1" />
-        <TextBlock Classes="muted">
-          <Run Text="{Binding ModaNama}" /><Run Text=" · " /><Run Text="{Binding TanggalText}" />
-        </TextBlock>
-      </StackPanel>
+  <UserControl.Resources>
+    <x:Double x:Key="TitleSize">32</x:Double>
+    <Thickness x:Key="CardPadding">24</Thickness>
+  </UserControl.Resources>
 
-      <Border Classes="card">
-        <StackPanel Spacing="12">
-          <TextBlock Text="Waktu mulai (HH:mm)" Classes="muted" />
-          <TextBox Text="{Binding WaktuMulaiText}" Watermark="07:30" MaxLength="5" />
+  <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+    <StackPanel Spacing="16">
 
-          <TextBlock Text="Waktu selesai (HH:mm)" Classes="muted" />
-          <TextBox Text="{Binding WaktuSelesaiText}" Watermark="08:00" MaxLength="5" />
+      <TextBlock Classes="h1" Text="REVISI PERJALANAN" FontSize="{DynamicResource TitleSize}" TextWrapping="Wrap" />
 
-          <TextBlock Text="{Binding ErrorMessage}" Classes="error" TextWrapping="Wrap"
-                     IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+      <Grid x:Name="Root" ColumnDefinitions="620*,364*" RowDefinitions="Auto,Auto">
 
-          <StackPanel Orientation="Horizontal" Spacing="10">
-            <Button Classes="primary" Content="Simpan" Command="{Binding SimpanRevisiCommand}" />
-            <Button Classes="ghost" Content="Batal" Command="{Binding BatalCommand}" />
+        <!-- Detail perjalanan -->
+        <Border x:Name="FormCard" Grid.Row="0" Grid.Column="0" Classes="card"
+                Padding="{DynamicResource CardPadding}" Margin="0,0,8,8">
+          <StackPanel>
+            <TextBlock Classes="h2" Text="Detail perjalanan" />
+            <TextBlock Classes="muted" Text="{Binding Subtitle}" Margin="0,4,0,0" TextWrapping="Wrap" />
+
+            <Border Classes="soft" Margin="0,24,0,0" Padding="12,10">
+              <StackPanel Spacing="2">
+                <TextBlock Classes="caption" Text="TANGGAL PERJALANAN" />
+                <TextBlock Text="{Binding DateText}" FontSize="14" FontWeight="Bold"
+                           Foreground="{DynamicResource ForestBrush}" TextWrapping="Wrap" />
+              </StackPanel>
+            </Border>
+
+            <TextBlock Text="Moda transportasi" FontSize="14" FontWeight="SemiBold" Margin="0,24,0,0" />
+            <ItemsControl x:Name="ModeList" ItemsSource="{Binding Modes}" Margin="-4,8,-4,0">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                  <UniformGrid Columns="4" />
+                </ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:ModeChoiceItem">
+                  <Button Classes="moda mini" Classes.active="{Binding IsSelected}"
+                          Command="{Binding Command}" Margin="4">
+                    <Grid RowDefinitions="*,Auto,Auto" Margin="4,8,4,12">
+                      <svg:Svg Grid.Row="0" Path="{Binding IconUri}" Width="64" Height="48"
+                               HorizontalAlignment="Center" VerticalAlignment="Center" />
+                      <TextBlock Grid.Row="1" Text="{Binding Label}" FontSize="14" FontWeight="Bold"
+                                 HorizontalAlignment="Center" Margin="0,8,0,0" />
+                      <TextBlock Grid.Row="2" Text="{Binding FaktorLabel}" FontSize="10"
+                                 HorizontalAlignment="Center" Margin="0,2,0,0" />
+                    </Grid>
+                  </Button>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <Grid ColumnDefinitions="*,*" Margin="0,24,0,0">
+              <StackPanel Grid.Column="0" Margin="0,0,8,0">
+                <TextBlock Text="Waktu mulai" FontSize="14" FontWeight="SemiBold" />
+                <TextBox Classes="gr" Height="46" CornerRadius="10" Margin="0,8,0,0"
+                         Text="{Binding StartText, Mode=TwoWay}"
+                         Classes.invalid="{Binding StartError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                  <TextBox.InnerRightContent>
+                    <TextBlock Classes="caption" Text="HH.MM" Margin="0,0,12,0" VerticalAlignment="Center" />
+                  </TextBox.InnerRightContent>
+                  <TextBox.KeyBindings>
+                    <KeyBinding Gesture="Enter" Command="{Binding SaveCommand}" />
+                  </TextBox.KeyBindings>
+                </TextBox>
+                <TextBlock Classes="error" Text="{Binding StartError}" Margin="0,6,0,0" TextWrapping="Wrap"
+                           IsVisible="{Binding StartError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+              </StackPanel>
+
+              <StackPanel Grid.Column="1" Margin="8,0,0,0">
+                <TextBlock Text="Waktu selesai" FontSize="14" FontWeight="SemiBold" />
+                <TextBox Classes="gr" Height="46" CornerRadius="10" Margin="0,8,0,0"
+                         Text="{Binding EndText, Mode=TwoWay}"
+                         Classes.invalid="{Binding EndError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                  <TextBox.InnerRightContent>
+                    <TextBlock Classes="caption" Text="HH.MM" Margin="0,0,12,0" VerticalAlignment="Center" />
+                  </TextBox.InnerRightContent>
+                  <TextBox.KeyBindings>
+                    <KeyBinding Gesture="Enter" Command="{Binding SaveCommand}" />
+                  </TextBox.KeyBindings>
+                </TextBox>
+                <TextBlock Classes="error" Text="{Binding EndError}" Margin="0,6,0,0" TextWrapping="Wrap"
+                           IsVisible="{Binding EndError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+              </StackPanel>
+            </Grid>
+
+            <Border Classes="note" Margin="0,24,0,0">
+              <StackPanel Spacing="2">
+                <TextBlock Text="Revisi hanya tersedia untuk perjalanan hari ini." FontSize="12" FontWeight="Bold"
+                           Foreground="{DynamicResource ForestBrush}" TextWrapping="Wrap" />
+                <TextBlock Classes="muted" Text="Tanggal sebelumnya tidak dapat diubah." TextWrapping="Wrap" />
+              </StackPanel>
+            </Border>
+
+            <TextBlock Classes="error" Text="{Binding FormError}" Margin="0,12,0,0" TextWrapping="Wrap"
+                       IsVisible="{Binding FormError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+
+            <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Right" Margin="0,24,0,0">
+              <Button Classes="outline" Content="Batal" MinWidth="96" Command="{Binding CancelCommand}" />
+              <Button Classes="soft" Content="{Binding SaveText}" MinWidth="168" Command="{Binding SaveCommand}" />
+            </StackPanel>
           </StackPanel>
-        </StackPanel>
-      </Border>
+        </Border>
+
+        <!-- Pratinjau revisi -->
+        <Border x:Name="PreviewCard" Grid.Row="0" Grid.Column="1" Classes="card"
+                Padding="{DynamicResource CardPadding}" Margin="8,0,0,8">
+          <StackPanel>
+            <TextBlock Classes="h2" Text="Pratinjau revisi" />
+            <TextBlock Classes="muted" Text="Belum disimpan" Margin="0,4,0,0" />
+
+            <Border Classes="soft" Margin="0,24,0,0" Padding="16,14">
+              <StackPanel Spacing="4">
+                <TextBlock Classes="caption" Text="SEBELUM REVISI" />
+                <TextBlock Text="{Binding OldSummary}" FontSize="16" FontWeight="Bold"
+                           Foreground="{DynamicResource ForestBrush}" TextWrapping="Wrap" />
+                <TextBlock Classes="muted" Text="{Binding OldDetail}" TextWrapping="Wrap" />
+              </StackPanel>
+            </Border>
+
+            <Border Margin="0,16,0,0" Padding="16,14" CornerRadius="8"
+                    Background="{DynamicResource BrandBgBrush}">
+              <StackPanel Spacing="6">
+                <TextBlock Classes="caption" Text="SETELAH REVISI" Foreground="{DynamicResource ForestBrush}" />
+                <TextBlock Text="{Binding NewHeadline}" FontSize="26" FontWeight="ExtraBold"
+                           Foreground="{DynamicResource ForestBrush}" TextWrapping="Wrap" />
+                <TextBlock Text="{Binding NewDetail}" FontSize="15" FontWeight="Bold"
+                           Foreground="{DynamicResource ForestBrush}" TextWrapping="Wrap" />
+                <TextBlock Classes="muted" Text="{Binding DeltaText}" TextWrapping="Wrap" />
+              </StackPanel>
+            </Border>
+
+            <TextBlock Text="Dihitung ulang otomatis" FontSize="14" FontWeight="Bold" Margin="0,24,0,0" />
+            <TextBlock Classes="muted" Text="{Binding FormulaText}" Margin="0,4,0,0" TextWrapping="Wrap" />
+
+            <Border Classes="soft" Margin="0,24,0,0" Padding="16,14">
+              <StackPanel Spacing="4">
+                <TextBlock Text="Total hari ini jika disimpan" FontSize="13" />
+                <TextBlock Text="{Binding NewDayTotal}" FontSize="20" FontWeight="Bold"
+                           Foreground="{DynamicResource ForestBrush}" TextWrapping="Wrap" />
+              </StackPanel>
+            </Border>
+
+            <TextBlock Classes="muted" Margin="0,16,0,0" TextWrapping="Wrap"
+                       Text="Setelah disimpan, catatan ditandai “Direvisi”. Kalender dan grafik ikut diperbarui." />
+          </StackPanel>
+        </Border>
+
+      </Grid>
 
     </StackPanel>
   </ScrollViewer>
+
 </UserControl>
