@@ -469,6 +469,9 @@ public sealed class PostgresGreenRideRepository
 
     // ── ILeaderboardService ───────────────────────────────────────────────────
 
+    // Hanya pengguna yang mendaftar sebelum Senin minggu ini yang masuk leaderboard, supaya
+    // seluruh Senin-Minggu bisa dihitung (akun baru tidak langsung menjadi peringkat 1).
+    // created_at disimpan dalam UTC, jadi dikonversi ke waktu Jakarta sebelum dibandingkan.
     // Peringkat memakai ROW_NUMBER (bukan RANK) agar nomornya unik dan berurutan 1, 2, 3, ...
     // UI mencari podium per nomor; dengan RANK, emisi yang sama menghasilkan nomor kembar.
     public async Task<IReadOnlyList<LeaderboardEntry>> GetCurrentWeekAsync(Guid userId)
@@ -482,6 +485,7 @@ public sealed class PostgresGreenRideRepository
                                     ON tl.user_id = u.id
                                    AND tl.waktu_selesai IS NOT NULL
                                    AND tl.tanggal BETWEEN @awal AND @akhir
+                             WHERE ((u.created_at AT TIME ZONE 'UTC') AT TIME ZONE 'Asia/Jakarta') < @awal
                              GROUP BY u.id, u.nama
                              ORDER BY total, u.nama";
         var list = new List<LeaderboardEntry>();
