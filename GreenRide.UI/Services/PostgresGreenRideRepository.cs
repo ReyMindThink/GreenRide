@@ -1,4 +1,6 @@
 using Npgsql;
+using NpgsqlTypes;
+using GreenRide.UI.Helpers;
 using GreenRide.UI.Models;
 
 namespace GreenRide.UI.Services;
@@ -12,6 +14,10 @@ public sealed class PostgresGreenRideRepository
         ?? throw new InvalidOperationException(
             "GREENRIDE_DB environment variable tidak ditemukan. " +
             "Pastikan file .env sudah ada di folder proyek.");
+
+    private readonly IClock _clock;
+
+    public PostgresGreenRideRepository(IClock clock) => _clock = clock;
 
     private NpgsqlConnection GetConnection() => new(_connString);
 
@@ -349,24 +355,167 @@ public sealed class PostgresGreenRideRepository
     }
 
     // ── IBadgeProgressService ─────────────────────────────────────────────────
-    // Dikerjakan Aqidatul — belum diimplementasi
 
-    public Task SettleCompletedWeeksAsync(Guid userId)
-        => throw new NotImplementedException();
+    private const int MingguDicek = 8;   // berapa minggu ke belakang dinilai saat login
 
-    public Task<WeeklyBadgeRecord?> GetLastWeekBadgeAsync(Guid userId)
-        => throw new NotImplementedException();
+    public async Task SettleCompletedWeeksAsync(Guid userId)
+    {
+        var mingguIni = WeekHelper.MondayOf(_clock.Today);
+        var batasAwal = mingguIni.AddDays(-7 * MingguDicek);
 
-    public Task<IReadOnlyList<WeeklyBadgeRecord>> GetEarnedBadgesAsync(Guid userId)
-        => throw new NotImplementedException();
+        const string cekSql = "SELECT minggu_mulai FROM weekly_badges WHERE user_id = @uid";
+        const string logSql = @"SELECT tanggal, SUM(emisi_kg)
+                                FROM trip_logs
+                                WHERE user_id = @uid
+                                  AND waktu_selesai IS NOT NULL
+                                  AND tanggal >= @awal AND tanggal < @akhir
+                                GROUP BY tanggal";
+        const string insSql = @"INSERT INTO weekly_badges
+                                    (user_id, minggu_mulai, minggu_selesai,
+                                     total_emisi_kg, badge_name, hari_tercatat)
+                                VALUES (@uid, @mulai, @selesai, @total, @badge, @hari)
+                                ON CONFLICT (user_id, minggu_mulai) DO NOTHING";
+        try
+        {
+            await using var conn = GetConnection();
+            await conn.OpenAsync();
+
+            // 1. Minggu yang sudah pernah dinilai
+            var sudahAda = new HashSet<DateOnly>();
+            await using (var cek = new NpgsqlCommand(cekSql, conn))
+            {
+                cek.Parameters.AddWithValue("uid", userId);
+                await using var r = await cek.ExecuteReaderAsync();
+                while (await r.ReadAsync()) sudahAda.Add(r.GetFieldValue<DateOnly>(0));
+            }
+
+            // 2. Total emisi harian 8 minggu terakhir, dikelompokkan per minggu (Senin–Minggu)
+            var perMinggu = new Dictionary<DateOnly, (decimal Total, int Hari)>();
+            await using (var log = new NpgsqlCommand(logSql, conn))
+            {
+                log.Parameters.AddWithValue("uid", userId);
+                log.Parameters.Add("awal",  NpgsqlDbType.Date).Value = batasAwal;
+                log.Parameters.Add("akhir", NpgsqlDbType.Date).Value = mingguIni;
+                await using var r = await log.ExecuteReaderAsync();
+                while (await r.ReadAsync())
+                {
+                    var senin = WeekHelper.MondayOf(r.GetFieldValue<DateOnly>(0));
+                    var emisi = r.IsDBNull(1) ? 0m : r.GetDecimal(1);
+                    perMinggu.TryGetValue(senin, out var cur);
+                    perMinggu[senin] = (cur.Total + emisi, cur.Hari + 1);
+                }
+            }
+
+            // 3. Simpan minggu yang belum ada (kurang dari 7 hari tercatat = tanpa badge)
+            foreach (var (senin, data) in perMinggu)
+            {
+                if (sudahAda.Contains(senin)) continue;
+
+                var level = BadgeRules.EvaluateWeek(data.Total, data.Hari);
+                string? namaBadge = level == BadgeLevel.None ? null : BadgeCatalog.Get(level)?.DbName;
+
+                await using var ins = new NpgsqlCommand(insSql, conn);
+                ins.Parameters.AddWithValue("uid", userId);
+                ins.Parameters.Add("mulai",   NpgsqlDbType.Date).Value = senin;
+                ins.Parameters.Add("selesai", NpgsqlDbType.Date).Value = senin.AddDays(6);
+                ins.Parameters.AddWithValue("total", data.Total);
+                ins.Parameters.Add("badge", NpgsqlDbType.Varchar).Value = (object?)namaBadge ?? DBNull.Value;
+                ins.Parameters.AddWithValue("hari", data.Hari);
+                await ins.ExecuteNonQueryAsync();
+            }
+        }
+        catch (Exception ex) { Console.WriteLine("SETTLEWEEKS ERROR: " + ex.Message); }
+    }
+
+    public async Task<WeeklyBadgeRecord?> GetLastWeekBadgeAsync(Guid userId)
+    {
+        var mulai = WeekHelper.MondayOf(_clock.Today).AddDays(-7);
+        const string sql = @"SELECT minggu_mulai, minggu_selesai, total_emisi_kg, badge_name, hari_tercatat
+                             FROM weekly_badges
+                             WHERE user_id = @uid AND minggu_mulai = @mulai";
+        try
+        {
+            await using var conn = GetConnection();
+            await conn.OpenAsync();
+            await using var cmd = new NpgsqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("uid", userId);
+            cmd.Parameters.Add("mulai", NpgsqlDbType.Date).Value = mulai;
+            await using var reader = await cmd.ExecuteReaderAsync();
+            if (await reader.ReadAsync()) return ReadBadgeRecord(reader);
+        }
+        catch (Exception ex) { Console.WriteLine("GETLASTWEEKBADGE ERROR: " + ex.Message); }
+        return null;
+    }
+
+    public async Task<IReadOnlyList<WeeklyBadgeRecord>> GetEarnedBadgesAsync(Guid userId)
+    {
+        const string sql = @"SELECT minggu_mulai, minggu_selesai, total_emisi_kg, badge_name, hari_tercatat
+                             FROM weekly_badges
+                             WHERE user_id = @uid AND badge_name IS NOT NULL
+                             ORDER BY minggu_mulai DESC";
+        var list = new List<WeeklyBadgeRecord>();
+        try
+        {
+            await using var conn = GetConnection();
+            await conn.OpenAsync();
+            await using var cmd = new NpgsqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("uid", userId);
+            await using var reader = await cmd.ExecuteReaderAsync();
+            while (await reader.ReadAsync()) list.Add(ReadBadgeRecord(reader));
+        }
+        catch (Exception ex) { Console.WriteLine("GETEARNEDBADGES ERROR: " + ex.Message); }
+        return list;
+    }
 
     // ── ILeaderboardService ───────────────────────────────────────────────────
-    // Dikerjakan Aqidatul — belum diimplementasi
 
-    public Task<IReadOnlyList<LeaderboardEntry>> GetCurrentWeekAsync(Guid userId)
-        => throw new NotImplementedException();
+    // Peringkat memakai ROW_NUMBER (bukan RANK) agar nomornya unik dan berurutan 1, 2, 3, ...
+    // UI mencari podium per nomor; dengan RANK, emisi yang sama menghasilkan nomor kembar.
+    public async Task<IReadOnlyList<LeaderboardEntry>> GetCurrentWeekAsync(Guid userId)
+    {
+        var senin = WeekHelper.MondayOf(_clock.Today);
+        const string sql = @"SELECT ROW_NUMBER() OVER (ORDER BY COALESCE(SUM(tl.emisi_kg), 0), u.nama) AS peringkat,
+                                    u.id, u.nama,
+                                    COALESCE(SUM(tl.emisi_kg), 0) AS total
+                             FROM users u
+                             LEFT JOIN trip_logs tl
+                                    ON tl.user_id = u.id
+                                   AND tl.waktu_selesai IS NOT NULL
+                                   AND tl.tanggal BETWEEN @awal AND @akhir
+                             GROUP BY u.id, u.nama
+                             ORDER BY total, u.nama";
+        var list = new List<LeaderboardEntry>();
+        try
+        {
+            await using var conn = GetConnection();
+            await conn.OpenAsync();
+            await using var cmd = new NpgsqlCommand(sql, conn);
+            cmd.Parameters.Add("awal",  NpgsqlDbType.Date).Value = senin;
+            cmd.Parameters.Add("akhir", NpgsqlDbType.Date).Value = senin.AddDays(6);
+            await using var reader = await cmd.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+            {
+                var total = reader.GetDecimal(3);
+                list.Add(new LeaderboardEntry(
+                    Rank: Convert.ToInt32(reader.GetValue(0)),
+                    Nama: reader.GetString(2),
+                    TotalEmisiKg: total,
+                    Badge: BadgeRules.FromTotal(total),
+                    IsCurrentUser: reader.GetGuid(1) == userId));
+            }
+        }
+        catch (Exception ex) { Console.WriteLine("GETLEADERBOARD ERROR: " + ex.Message); }
+        return list;
+    }
 
     // ── Helper ────────────────────────────────────────────────────────────────
+
+    private static WeeklyBadgeRecord ReadBadgeRecord(NpgsqlDataReader r) => new WeeklyBadgeRecord(
+        r.GetFieldValue<DateOnly>(0),
+        r.GetFieldValue<DateOnly>(1),
+        r.GetDecimal(2),
+        BadgeCatalog.FromDbName(r.IsDBNull(3) ? null : r.GetString(3)),
+        Convert.ToInt32(r.GetValue(4)));
 
     private static TripLog ReadTripLog(NpgsqlDataReader r) => new TripLog
     {
