@@ -1,76 +1,126 @@
-<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:c="using:GreenRide.UI.Controls" x:Class="GreenRide.UI.Views.CatatView">
-  <ScrollViewer>
-    <StackPanel Margin="20" Spacing="16">
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:GreenRide.UI.ViewModels"
+             xmlns:svg="clr-namespace:Avalonia.Svg.Skia;assembly=Avalonia.Svg.Skia"
+             x:Class="GreenRide.UI.Views.CatatView"
+             x:DataType="vm:CatatViewModel">
 
-      <StackPanel>
-        <TextBlock Text="Catat Perjalanan" Classes="h1" />
-        <TextBlock Text="Pilih moda transportasi yang kamu pakai" Classes="muted" />
-      </StackPanel>
+  <!-- Ukuran di bawah ini nilai "lebar". CatatView.axaml.cs menggantinya saat tampilan menyempit. -->
+  <UserControl.Resources>
+    <x:Double x:Key="GreetingSize">32</x:Double>
+    <x:Double x:Key="CardTitleSize">22</x:Double>
+    <x:Double x:Key="BadgeBoxHeight">250</x:Double>
+    <x:Double x:Key="ShelfIconHeight">126</x:Double>
+    <x:Double x:Key="TimerSize">40</x:Double>
+    <x:Double x:Key="ModeCardHeight">242</x:Double>
+    <x:Double x:Key="ModeIconWidth">120</x:Double>
+    <x:Double x:Key="ModeIconHeight">100</x:Double>
+    <x:Double x:Key="ModeLabelSize">22</x:Double>
+    <Thickness x:Key="CardPadding">24</Thickness>
+    <Thickness x:Key="TripCardPadding">8,24,8,8</Thickness>
+    <Thickness x:Key="ModeInnerMargin">8,0,8,28</Thickness>
+  </UserControl.Resources>
 
-      <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto">
+  <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+    <StackPanel Spacing="16">
 
-        <StackPanel Spacing="16" Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="{Binding Span}" Margin="{Binding FirstMargin}">
-          <Border Classes="card">
-            <StackPanel Spacing="10">
-              <TextBlock Text="Pilihan Moda Transportasi" Classes="h2" />
-              <ListBox Classes="modes" ItemsSource="{Binding Modes}" SelectedItem="{Binding SelectedMode}"
-                       ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                       ScrollViewer.VerticalScrollBarVisibility="Disabled">
-                <ListBox.ItemsPanel>
-                  <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
-                </ListBox.ItemsPanel>
-                <ListBox.ItemTemplate>
-                  <DataTemplate>
-                    <StackPanel Spacing="4" HorizontalAlignment="Center" VerticalAlignment="Center">
-                      <TextBlock Text="{Binding Emoji}" FontSize="40" HorizontalAlignment="Center" />
-                      <TextBlock Text="{Binding Nama}" FontWeight="Bold" HorizontalAlignment="Center" />
-                      <TextBlock Text="{Binding FaktorText}" FontSize="11" Opacity="0.8" HorizontalAlignment="Center" />
-                    </StackPanel>
-                  </DataTemplate>
-                </ListBox.ItemTemplate>
-              </ListBox>
-            </StackPanel>
-          </Border>
+      <TextBlock Classes="h1" FontSize="{DynamicResource GreetingSize}" Text="{Binding Greeting}"
+                 TextWrapping="Wrap" />
 
-          <Border Classes="card">
-            <StackPanel Spacing="12">
-              <TextBlock Text="Durasi &amp; Tanggal" Classes="h2" />
-              <TextBlock Text="Durasi (menit)" Classes="muted" />
-              <NumericUpDown Value="{Binding DurasiMenit}" Minimum="1" Maximum="600" Increment="5" FormatString="0" />
-              <StackPanel Orientation="Horizontal" Spacing="8">
-                <Button Classes="chip" Content="15" Command="{Binding SetDurasiCommand}" CommandParameter="15" />
-                <Button Classes="chip" Content="30" Command="{Binding SetDurasiCommand}" CommandParameter="30" />
-                <Button Classes="chip" Content="45" Command="{Binding SetDurasiCommand}" CommandParameter="45" />
-                <Button Classes="chip" Content="60" Command="{Binding SetDurasiCommand}" CommandParameter="60" />
-              </StackPanel>
-              <TextBlock Text="Tanggal perjalanan" Classes="muted" Margin="0,6,0,0" />
-              <CalendarDatePicker SelectedDate="{Binding Tanggal}" DisplayDateEnd="{Binding MaxTanggal}" HorizontalAlignment="Stretch" />
-            </StackPanel>
-          </Border>
-        </StackPanel>
+      <Grid x:Name="Root" ColumnDefinitions="528*,448*" RowDefinitions="Auto,Auto,Auto">
 
-        <StackPanel Spacing="16" Grid.Row="{Binding SecondRow}" Grid.Column="{Binding SecondColumn}" Grid.ColumnSpan="{Binding Span}" Margin="{Binding SecondMargin}">
-          <Border Classes="hero">
-            <StackPanel Spacing="6">
-              <TextBlock Text="Estimasi emisi" Foreground="#C8E6C9" />
-              <TextBlock Text="{Binding PreviewText}" Foreground="White" FontSize="30" FontWeight="ExtraBold" TextWrapping="Wrap" />
-              <TextBlock Text="{Binding CompareText}" Foreground="#E8F5E9" TextWrapping="Wrap" />
-            </StackPanel>
-          </Border>
+        <!-- Badge minggu lalu -->
+        <Border x:Name="BadgeCard" Grid.Row="0" Grid.Column="0" Classes="card"
+                MinHeight="409" Padding="{DynamicResource CardPadding}" Margin="0,4,4,4">
+          <StackPanel VerticalAlignment="Center" Spacing="0">
+            <Border Height="{DynamicResource BadgeBoxHeight}">
+              <svg:Svg Path="{Binding LastBadgeIcon}" />
+            </Border>
+            <TextBlock Text="{Binding LastBadgeName}" FontSize="{DynamicResource CardTitleSize}"
+                       FontWeight="Bold" TextAlignment="Center" TextWrapping="Wrap"
+                       HorizontalAlignment="Center" Margin="0,24,0,0" />
+            <TextBlock Text="{Binding LastBadgeDescription}" FontSize="14" TextAlignment="Center"
+                       TextWrapping="Wrap" HorizontalAlignment="Center" Margin="0,8,0,0" />
+          </StackPanel>
+        </Border>
 
-          <Button Classes="primary" Content="💾  Simpan Perjalanan" Command="{Binding SimpanCommand}" HorizontalAlignment="Stretch" />
-          <TextBlock Text="{Binding StatusMessage}" Foreground="{DynamicResource GrPrimaryDark}" FontWeight="SemiBold" TextWrapping="Wrap"
-                     IsVisible="{Binding StatusMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+        <!-- Koleksi Badge -->
+        <Border x:Name="ShelfCard" Grid.Row="1" Grid.Column="0" Classes="card"
+                MinHeight="266" Padding="{DynamicResource CardPadding}" Margin="0,4,4,0">
+          <StackPanel Spacing="16">
+            <TextBlock Text="Koleksi Badge" FontSize="{DynamicResource CardTitleSize}" FontWeight="Bold" />
+            <ItemsControl x:Name="ShelfList" ItemsSource="{Binding Shelf}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                  <UniformGrid Columns="4" />
+                </ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:BadgeShelfItem">
+                  <StackPanel Margin="4,0,4,12" Spacing="4">
+                    <Border Height="{DynamicResource ShelfIconHeight}">
+                      <svg:Svg Path="{Binding IconUri}" />
+                    </Border>
+                    <TextBlock Text="{Binding Nama}" FontSize="14" FontWeight="Bold"
+                               HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap"
+                               Margin="0,8,0,0" />
+                    <TextBlock Classes="caption" Text="{Binding BatasLabel}"
+                               HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" />
+                  </StackPanel>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+        </Border>
 
-          <Border Classes="card">
-            <StackPanel Spacing="8">
-              <TextBlock Text="Perjalanan Terbaru" Classes="h2" />
-              <ItemsControl ItemsSource="{Binding RecentLogs}" ItemTemplate="{DynamicResource LogRowTemplate}" />
-            </StackPanel>
-          </Border>
-        </StackPanel>
+        <!-- Catat perjalanan hari ini -->
+        <Border x:Name="TripCard" Grid.Row="0" Grid.RowSpan="2" Grid.Column="1" Classes="card"
+                MinHeight="683" Padding="{DynamicResource TripCardPadding}" Margin="4,0,0,4">
+          <StackPanel>
+            <TextBlock Text="Catat Perjalanan Hari Ini" FontSize="{DynamicResource CardTitleSize}"
+                       FontWeight="SemiBold" HorizontalAlignment="Center" TextAlignment="Center"
+                       TextWrapping="Wrap" />
+            <TextBlock Text="{Binding TimerText}" FontSize="{DynamicResource TimerSize}"
+                       FontWeight="ExtraBold" HorizontalAlignment="Center" Margin="0,12,0,0" />
+            <TextBlock Text="{Binding CaptionText}" FontSize="13" TextAlignment="Center" TextWrapping="Wrap"
+                       HorizontalAlignment="Center" Margin="16,8,16,0" />
+            <TextBlock Classes="error" Text="{Binding ErrorMessage}" TextAlignment="Center"
+                       TextWrapping="Wrap" HorizontalAlignment="Center" Margin="16,8,16,0"
+                       IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+
+            <ItemsControl ItemsSource="{Binding Modes}" Margin="0,16,0,0">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                  <UniformGrid Columns="2" />
+                </ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:ModeCardItem">
+                  <Button Classes="moda" Classes.active="{Binding IsActive}"
+                          Height="{DynamicResource ModeCardHeight}"
+                          IsEnabled="{Binding IsEnabled}" Command="{Binding Command}"
+                          Margin="6">
+                    <Grid RowDefinitions="*,Auto,Auto" Margin="{DynamicResource ModeInnerMargin}">
+                      <svg:Svg Grid.Row="0" Path="{Binding IconUri}"
+                               Width="{DynamicResource ModeIconWidth}"
+                               Height="{DynamicResource ModeIconHeight}"
+                               HorizontalAlignment="Center" VerticalAlignment="Center" />
+                      <TextBlock Grid.Row="1" Text="{Binding Label}"
+                                 FontSize="{DynamicResource ModeLabelSize}" FontWeight="Bold"
+                                 HorizontalAlignment="Center" Margin="0,12,0,0" />
+                      <TextBlock Grid.Row="2" Text="{Binding FaktorLabel}" FontSize="13"
+                                 HorizontalAlignment="Center" Margin="0,4,0,0" />
+                    </Grid>
+                  </Button>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+        </Border>
 
       </Grid>
+
     </StackPanel>
   </ScrollViewer>
+
 </UserControl>

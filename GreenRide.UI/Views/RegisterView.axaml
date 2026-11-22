@@ -1,17 +1,86 @@
-<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:c="using:GreenRide.UI.Controls" x:Class="GreenRide.UI.Views.RegisterView">
-  <ScrollViewer>
-    <Border Classes="card" MaxWidth="440" Margin="24" VerticalAlignment="Center" HorizontalAlignment="Stretch" Padding="26">
-      <StackPanel Spacing="12">
-        <c:LogoMark Width="84" Height="84" HorizontalAlignment="Center" />
-        <TextBlock Text="Daftar Akun" Classes="h1" HorizontalAlignment="Center" />
-        <TextBox Text="{Binding Nama}" Watermark="nama lengkap" />
-        <TextBox Text="{Binding Email}" Watermark="email" />
-        <TextBox Text="{Binding Password}" Watermark="password (min. 6 karakter)" PasswordChar="●" />
-        <TextBox Text="{Binding Konfirmasi}" Watermark="ulangi password" PasswordChar="●" />
-        <TextBlock Text="{Binding Error}" Classes="error" TextWrapping="Wrap" IsVisible="{Binding Error, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-        <Button Classes="primary" Content="Daftar" Command="{Binding DaftarCommand}" HorizontalAlignment="Stretch" Margin="0,6,0,0" />
-        <Button Classes="ghost" Content="Sudah punya akun? Login" Command="{Binding KeLoginCommand}" HorizontalAlignment="Center" />
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:GreenRide.UI.ViewModels"
+             xmlns:ctl="using:GreenRide.UI.Controls"
+             xmlns:svg="clr-namespace:Avalonia.Svg.Skia;assembly=Avalonia.Svg.Skia"
+             x:Class="GreenRide.UI.Views.RegisterView"
+             x:DataType="vm:RegisterViewModel">
+
+  <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+    <Border MaxWidth="353" Margin="24,32" VerticalAlignment="Center">
+      <StackPanel>
+
+        <svg:Svg Path="/Assets/Images/logo.svg" Width="80" Height="80" HorizontalAlignment="Center" />
+
+        <TextBlock Text="Sign Up" FontSize="26" FontWeight="ExtraBold"
+                   HorizontalAlignment="Center" Margin="0,18,0,0" />
+        <TextBlock Text="Daftar untuk bergabung dengan GreenRide" FontSize="15"
+                   TextAlignment="Center" TextWrapping="Wrap" Margin="0,6,0,0"
+                   Foreground="{DynamicResource InkSoftBrush}" />
+
+        <!-- Nama -->
+        <TextBlock Text="Nama" FontSize="14" FontWeight="SemiBold" Margin="0,32,0,0" />
+        <TextBox x:Name="NamaBox" Classes="gr" Height="46" CornerRadius="10" Margin="0,8,0,0"
+                 Watermark="eg. John Doe" MaxLength="100"
+                 Text="{Binding Nama, Mode=TwoWay}"
+                 Classes.invalid="{Binding NamaError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+          <TextBox.KeyBindings>
+            <KeyBinding Gesture="Enter" Command="{Binding SubmitCommand}" />
+          </TextBox.KeyBindings>
+        </TextBox>
+        <TextBlock Classes="error" Text="{Binding NamaError}" Margin="0,6,0,0" TextWrapping="Wrap"
+                   IsVisible="{Binding NamaError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+
+        <!-- Email -->
+        <TextBlock Text="Email" FontSize="14" FontWeight="SemiBold" Margin="0,20,0,0" />
+        <TextBox Classes="gr" Height="46" CornerRadius="10" Margin="0,8,0,0"
+                 Watermark="eg. johndoe@gmail.com" MaxLength="100"
+                 Text="{Binding Email, Mode=TwoWay}"
+                 Classes.invalid="{Binding EmailError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+          <TextBox.KeyBindings>
+            <KeyBinding Gesture="Enter" Command="{Binding SubmitCommand}" />
+          </TextBox.KeyBindings>
+        </TextBox>
+        <TextBlock Classes="error" Text="{Binding EmailError}" Margin="0,6,0,0" TextWrapping="Wrap"
+                   IsVisible="{Binding EmailError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+
+        <!-- Password -->
+        <TextBlock Text="Password" FontSize="14" FontWeight="SemiBold" Margin="0,20,0,0" />
+        <ctl:PasswordBox Margin="0,8,0,0" Watermark="Enter your password"
+                         Text="{Binding Password, Mode=TwoWay}"
+                         SubmitCommand="{Binding SubmitCommand}"
+                         IsInvalid="{Binding PasswordError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+        <TextBlock Classes="error" Text="{Binding PasswordError}" Margin="0,6,0,0" TextWrapping="Wrap"
+                   IsVisible="{Binding PasswordError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+        <TextBlock Text="Minimal 6 karakter" FontSize="13" Margin="0,6,0,0"
+                   Foreground="{DynamicResource TextGrayBrush}"
+                   IsVisible="{Binding PasswordError, Converter={x:Static StringConverters.IsNullOrEmpty}}" />
+
+        <!-- Konfirmasi Password -->
+        <TextBlock Text="Konfirmasi Password" FontSize="14" FontWeight="SemiBold" Margin="0,20,0,0" />
+        <ctl:PasswordBox Margin="0,8,0,0" Watermark="Enter your password"
+                         Text="{Binding ConfirmPassword, Mode=TwoWay}"
+                         SubmitCommand="{Binding SubmitCommand}"
+                         IsInvalid="{Binding ConfirmError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+        <TextBlock Classes="error" Text="{Binding ConfirmError}" Margin="0,6,0,0" TextWrapping="Wrap"
+                   IsVisible="{Binding ConfirmError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+
+        <!-- Pesan dari service -->
+        <TextBlock Classes="error" Text="{Binding FormError}" Margin="0,20,0,0"
+                   TextAlignment="Center" TextWrapping="Wrap"
+                   IsVisible="{Binding FormError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+
+        <Button Classes="primary" Height="46" CornerRadius="10" HorizontalAlignment="Stretch"
+                Margin="0,24,0,0" Content="{Binding SubmitText}" Command="{Binding SubmitCommand}" />
+
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="4" Margin="0,24,0,0">
+          <TextBlock Text="Sudah punya akun?" FontSize="13" VerticalAlignment="Center"
+                     Foreground="{DynamicResource InkSoftBrush}" />
+          <Button Classes="link" Content="Masuk" FontSize="13" Command="{Binding GoToLoginCommand}" />
+        </StackPanel>
+
       </StackPanel>
     </Border>
   </ScrollViewer>
+
 </UserControl>

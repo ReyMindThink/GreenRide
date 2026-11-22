@@ -1,22 +1,23 @@
+using System.Windows.Input;
+using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
 namespace GreenRide.UI.ViewModels;
 
-public partial class NavItem : ObservableObject
+/// <summary>Satu baris menu di sidebar.</summary>
+public sealed partial class NavItem : ObservableObject
 {
-    public string Title { get; }
-    public string Emoji { get; }
-    public PageViewModelBase Page { get; }
-    public IRelayCommand SelectCommand { get; }
-
-    [ObservableProperty] private bool _isSelected;
-
-    public NavItem(string title, string emoji, PageViewModelBase page, Action<NavItem> onSelect)
+    public NavItem(string title, Geometry? icon, Action onClick)
     {
         Title = title;
-        Emoji = emoji;
-        Page = page;
-        SelectCommand = new RelayCommand(() => onSelect(this));
+        Icon = icon;
+        Command = new RelayCommand(onClick);
     }
+
+    public string Title { get; }
+    public Geometry? Icon { get; }
+    public ICommand Command { get; }
+
+    [ObservableProperty] private bool _isActive;
 }

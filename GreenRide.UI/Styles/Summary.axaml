@@ -1,0 +1,87 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <!-- Sel kalender (Ringkasan). Warna mengikuti PRD 5.3: hijau / kuning / merah / abu. -->
+  <Style Selector="Button.cal">
+    <Setter Property="Height" Value="30" />
+    <Setter Property="Margin" Value="3" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="BorderThickness" Value="2" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="Background" Value="{DynamicResource CalNoneBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource InkBrush}" />
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Background="{TemplateBinding Background}"
+                BorderBrush="{TemplateBinding BorderBrush}"
+                BorderThickness="{TemplateBinding BorderThickness}"
+                CornerRadius="{TemplateBinding CornerRadius}">
+          <ContentPresenter Content="{TemplateBinding Content}"
+                            Foreground="{TemplateBinding Foreground}"
+                            FontSize="{TemplateBinding FontSize}"
+                            FontWeight="{TemplateBinding FontWeight}"
+                            HorizontalAlignment="Center" VerticalAlignment="Center" />
+        </Border>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+  <Style Selector="Button.cal.good">
+    <Setter Property="Background" Value="{DynamicResource CalGoodBrush}" />
+  </Style>
+  <Style Selector="Button.cal.avg">
+    <Setter Property="Background" Value="{DynamicResource CalAverageBrush}" />
+  </Style>
+  <Style Selector="Button.cal.high">
+    <Setter Property="Background" Value="{DynamicResource CalHighBrush}" />
+  </Style>
+  <Style Selector="Button.cal.none">
+    <Setter Property="Background" Value="{DynamicResource CalNoneBrush}" />
+  </Style>
+  <Style Selector="Button.cal.today">
+    <Setter Property="FontWeight" Value="ExtraBold" />
+  </Style>
+  <Style Selector="Button.cal:pointerover">
+    <Setter Property="Opacity" Value="0.8" />
+  </Style>
+  <Style Selector="Button.cal.sel">
+    <Setter Property="BorderBrush" Value="{DynamicResource ForestBrush}" />
+  </Style>
+
+  <!-- Batang grafik mingguan: hijau muda, minggu berjalan hijau tua -->
+  <Style Selector="Border.bar">
+    <Setter Property="Background" Value="{DynamicResource BrandBgBrush}" />
+    <Setter Property="CornerRadius" Value="8" />
+  </Style>
+  <Style Selector="Border.bar.current">
+    <Setter Property="Background" Value="{DynamicResource ForestBrush}" />
+  </Style>
+
+  <!-- Tombol panah bulan -->
+  <Style Selector="Button.ghost">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="14,10" />
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="Cursor" Value="Hand" />
+  </Style>
+  <Style Selector="Button.ghost /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+  <Style Selector="Button.ghost:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource SurfaceSoftBrush}" />
+  </Style>
+  <Style Selector="Button.ghost:disabled">
+    <Setter Property="Opacity" Value="0.3" />
+  </Style>
+
+  <!-- Kartu moda versi kecil (form Revisi). Warna aktif/redup ikut Button.moda. -->
+  <Style Selector="Button.moda.mini">
+    <Setter Property="Height" Value="134" />
+  </Style>
+
+</Styles>

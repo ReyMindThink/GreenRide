@@ -1,11 +1,18 @@
 using CommunityToolkit.Mvvm.Input;
+using GreenRide.UI.Services;
 
 namespace GreenRide.UI.ViewModels;
 
-public partial class IntroViewModel : ViewModelBase
+/// <summary>Layar Awal: sambutan + tombol Masuk / Daftar.</summary>
+public sealed partial class IntroViewModel : ViewModelBase
 {
-    private readonly Action _onStart;
-    public IntroViewModel(Action onStart) => _onStart = onStart;
+    private readonly INavigationService _navigation;
 
-    [RelayCommand] private void Mulai() => _onStart();
+    public IntroViewModel(INavigationService navigation) => _navigation = navigation;
+
+    [RelayCommand]
+    private void GoToLogin() => _navigation.NavigateTo<LoginViewModel>();
+
+    [RelayCommand]
+    private void GoToRegister() => _navigation.NavigateTo<RegisterViewModel>();
 }
