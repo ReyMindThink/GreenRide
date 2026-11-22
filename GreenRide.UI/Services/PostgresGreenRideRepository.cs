@@ -379,8 +379,60 @@ public sealed class PostgresGreenRideRepository : IGreenRideRepository
     }
 
     public Dictionary<DateOnly, decimal> GetCalendarEmission(Guid userId, int year, int month)
-        => throw new NotImplementedException();
+    {
+        const string sql = @"SELECT tanggal, SUM(emisi_kg) AS total_emisi_harian
+                         FROM trip_logs
+                         WHERE user_id = @uid
+                           AND emisi_kg IS NOT NULL
+                           AND tanggal BETWEEN @awal AND @akhir
+                         GROUP BY tanggal";
+        var hasil = new Dictionary<DateOnly, decimal>();
+        var awal = new DateOnly(year, month, 1);
+        var akhir = awal.AddMonths(1).AddDays(-1);
+        try
+        {
+            using var conn = GetConnection();
+            conn.Open();
+            using var cmd = new NpgsqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("uid", userId);
+            cmd.Parameters.Add(new NpgsqlParameter("awal", NpgsqlTypes.NpgsqlDbType.Date) { Value = awal });
+            cmd.Parameters.Add(new NpgsqlParameter("akhir", NpgsqlTypes.NpgsqlDbType.Date) { Value = akhir });
+            using var reader = cmd.ExecuteReader();
+            while (reader.Read())
+                hasil[reader.GetFieldValue<DateOnly>(0)] = reader.GetDecimal(1);
+        }
+        catch (Exception ex) { Console.WriteLine("GETCALENDAREMISSION ERROR: " + ex.Message); }
+        return hasil;
+    }
 
     public IReadOnlyList<LeaderboardEntry> GetLeaderboard(DateOnly weekStart)
-        => throw new NotImplementedException();
+    {
+        const string sql = @"SELECT RANK() OVER (ORDER BY COALESCE(SUM(tl.emisi_kg), 0)) AS peringkat,
+                                u.nama,
+                                COALESCE(SUM(tl.emisi_kg), 0) AS total_emisi_minggu_ini
+                         FROM users u
+                         LEFT JOIN trip_logs tl
+                                ON tl.user_id = u.id
+                               AND tl.tanggal BETWEEN @senin AND @hariIni
+                         GROUP BY u.id, u.nama
+                         ORDER BY total_emisi_minggu_ini, u.nama";
+        var list = new List<LeaderboardEntry>();
+        var hariIni = DateOnly.FromDateTime(DateTime.Today);
+        try
+        {
+            using var conn = GetConnection();
+            conn.Open();
+            using var cmd = new NpgsqlCommand(sql, conn);
+            cmd.Parameters.Add(new NpgsqlParameter("senin", NpgsqlTypes.NpgsqlDbType.Date) { Value = weekStart });
+            cmd.Parameters.Add(new NpgsqlParameter("hariIni", NpgsqlTypes.NpgsqlDbType.Date) { Value = hariIni });
+            using var reader = cmd.ExecuteReader();
+            while (reader.Read())
+                list.Add(new LeaderboardEntry(
+                    (int)reader.GetInt64(0),
+                    reader.GetString(1),
+                    reader.GetDecimal(2)));
+        }
+        catch (Exception ex) { Console.WriteLine("GETLEADERBOARD ERROR: " + ex.Message); }
+        return list;
+    }
 }
