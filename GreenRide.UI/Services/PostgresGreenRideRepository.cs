@@ -293,13 +293,90 @@ public sealed class PostgresGreenRideRepository : IGreenRideRepository
 
     // ── Badge & Leaderboard (dikerjakan Aqidatul — belum diimplementasi) ───────
     public WeeklyBadge? GetPreviousWeekBadge(Guid userId)
-        => throw new NotImplementedException();
+    {
+        const string sql = @"SELECT id, user_id, minggu_mulai, minggu_selesai,
+                                total_emisi_kg, badge_name, hari_tercatat
+                         FROM weekly_badges
+                         WHERE user_id = @uid AND minggu_selesai < @mingguIni
+                         ORDER BY minggu_selesai DESC
+                         LIMIT 1";
+        // Senin minggu berjalan (Senin = hari ke-0)
+        var hariIni = DateOnly.FromDateTime(DateTime.Today);
+        var mingguIni = hariIni.AddDays(-(((int)hariIni.DayOfWeek + 6) % 7));
+        try
+        {
+            using var conn = GetConnection();
+            conn.Open();
+            using var cmd = new NpgsqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("uid", userId);
+            cmd.Parameters.Add(new NpgsqlParameter("mingguIni", NpgsqlTypes.NpgsqlDbType.Date) { Value = mingguIni });
+            using var reader = cmd.ExecuteReader();
+            if (!reader.Read()) return null;
+
+            return new WeeklyBadge(
+                reader.GetGuid(0),
+                reader.GetGuid(1),
+                reader.GetFieldValue<DateOnly>(2),
+                reader.GetFieldValue<DateOnly>(3),
+                reader.GetDecimal(4),
+                reader.IsDBNull(5) ? null : reader.GetString(5),
+                reader.GetInt32(6));
+        }
+        catch (Exception ex) { Console.WriteLine("GETPREVIOUSWEEKBADGE ERROR: " + ex.Message); return null; }
+    }
 
     public IReadOnlyList<WeeklyBadge> GetAllWeeklyBadges(Guid userId)
-        => throw new NotImplementedException();
+    {
+        const string sql = @"SELECT id, user_id, minggu_mulai, minggu_selesai,
+                                total_emisi_kg, badge_name, hari_tercatat
+                         FROM weekly_badges
+                         WHERE user_id = @uid
+                         ORDER BY minggu_mulai";
+        var list = new List<WeeklyBadge>();
+        try
+        {
+            using var conn = GetConnection();
+            conn.Open();
+            using var cmd = new NpgsqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("uid", userId);
+            using var reader = cmd.ExecuteReader();
+            while (reader.Read())
+                list.Add(new WeeklyBadge(
+                    reader.GetGuid(0),
+                    reader.GetGuid(1),
+                    reader.GetFieldValue<DateOnly>(2),
+                    reader.GetFieldValue<DateOnly>(3),
+                    reader.GetDecimal(4),
+                    reader.IsDBNull(5) ? null : reader.GetString(5),
+                    reader.GetInt32(6)));
+        }
+        catch (Exception ex) { Console.WriteLine("GETALLWEEKLYBADGES ERROR: " + ex.Message); }
+        return list;
+    }
 
     public void AddWeeklyBadge(WeeklyBadge badge)
-        => throw new NotImplementedException();
+    {
+        const string sql = @"INSERT INTO weekly_badges
+                             (id, user_id, minggu_mulai, minggu_selesai,
+                              total_emisi_kg, badge_name, hari_tercatat)
+                         VALUES (@id, @uid, @mulai, @selesai, @total, @badge, @hari)
+                         ON CONFLICT (user_id, minggu_mulai) DO NOTHING";
+        try
+        {
+            using var conn = GetConnection();
+            conn.Open();
+            using var cmd = new NpgsqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("id", badge.Id);
+            cmd.Parameters.AddWithValue("uid", badge.UserId);
+            cmd.Parameters.Add(new NpgsqlParameter("mulai", NpgsqlTypes.NpgsqlDbType.Date) { Value = badge.MingguMulai });
+            cmd.Parameters.Add(new NpgsqlParameter("selesai", NpgsqlTypes.NpgsqlDbType.Date) { Value = badge.MingguSelesai });
+            cmd.Parameters.AddWithValue("total", badge.TotalEmisiKg);
+            cmd.Parameters.AddWithValue("badge", (object?)badge.BadgeName ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("hari", badge.HariTercatat);
+            cmd.ExecuteNonQuery();
+        }
+        catch (Exception ex) { Console.WriteLine("ADDWEEKLYBADGE ERROR: " + ex.Message); }
+    }
 
     public Dictionary<DateOnly, decimal> GetCalendarEmission(Guid userId, int year, int month)
         => throw new NotImplementedException();
