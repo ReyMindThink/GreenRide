@@ -291,7 +291,7 @@ public sealed class PostgresGreenRideRepository : IGreenRideRepository
         catch (Exception ex) { Console.WriteLine("UPDATETRIPLOG ERROR: " + ex.Message); throw; }
     }
 
-    // ── Badge & Leaderboard (dikerjakan Aqidatul — belum diimplementasi) ───────
+    // ── Badge, Kalender & Leaderboard ──────────────────────────────────────────
     public WeeklyBadge? GetPreviousWeekBadge(Guid userId)
     {
         const string sql = @"SELECT id, user_id, minggu_mulai, minggu_selesai,
