@@ -1,18 +1,12 @@
-using System;
-using System.Collections.Generic;
 using Npgsql;
-using GreenRide.Models;
 using GreenRide.UI.Models;
 
 namespace GreenRide.UI.Services;
 
-/// <summary>
-/// POLYMORPHISM: Implementasi IGreenRideRepository menggunakan PostgreSQL via Supabase.
-/// Dapat menggantikan InMemoryGreenRideRepository tanpa mengubah kode UI.
-/// </summary>
-public sealed class PostgresGreenRideRepository : IGreenRideRepository
+public sealed class PostgresGreenRideRepository
+    : IAuthService, ITripService, IEmissionService,
+      IBadgeProgressService, ILeaderboardService
 {
-    // ENCAPSULATION: connection string dibaca dari environment variable
     private readonly string _connString =
         Environment.GetEnvironmentVariable("GREENRIDE_DB")
         ?? throw new InvalidOperationException(
@@ -21,34 +15,40 @@ public sealed class PostgresGreenRideRepository : IGreenRideRepository
 
     private NpgsqlConnection GetConnection() => new(_connString);
 
-    // ── Autentikasi ────────────────────────────────────────────────────────────
-    public AccountInfo? Authenticate(string email, string password)
+    // ── IAuthService ──────────────────────────────────────────────────────────
+
+    public async Task<AuthResult> LoginAsync(string email, string password)
     {
         const string sql = @"SELECT id, nama, email, password_hash
                              FROM users WHERE email = @email LIMIT 1";
         try
         {
-            using var conn = GetConnection();
-            conn.Open();
-            using var cmd = new NpgsqlCommand(sql, conn);
+            await using var conn = GetConnection();
+            await conn.OpenAsync();
+            await using var cmd = new NpgsqlCommand(sql, conn);
             cmd.Parameters.AddWithValue("email", email.Trim().ToLower());
-            using var reader = cmd.ExecuteReader();
-            if (!reader.Read()) return null;
+            await using var reader = await cmd.ExecuteReaderAsync();
+            if (!await reader.ReadAsync())
+                return AuthResult.Fail("Email atau password salah.");
 
-            var id    = reader.GetGuid(0);
-            var nama  = reader.GetString(1);
-            var mail  = reader.GetString(2);
-            var hash  = reader.GetString(3);
+            var id   = reader.GetGuid(0);
+            var nama = reader.GetString(1);
+            var mail = reader.GetString(2);
+            var hash = reader.GetString(3);
 
-            return BCrypt.Net.BCrypt.Verify(password, hash)
-                ? new AccountInfo(id, nama, mail)
-                : null;
+            if (!BCrypt.Net.BCrypt.Verify(password, hash))
+                return AuthResult.Fail("Email atau password salah.");
+
+            return AuthResult.Ok(new UserAccount(id, nama, mail));
         }
-        catch { return null; }
+        catch (Exception ex)
+        {
+            Console.WriteLine("LOGIN ERROR: " + ex.Message);
+            return AuthResult.Fail("Gagal terhubung ke server.");
+        }
     }
 
-    // ── Registrasi ─────────────────────────────────────────────────────────────
-    public AccountInfo? Register(string nama, string email, string password)
+    public async Task<AuthResult> RegisterAsync(string nama, string email, string password)
     {
         const string cekSql = "SELECT COUNT(*) FROM users WHERE email = @email";
         const string insSql = @"INSERT INTO users (nama, email, password_hash)
@@ -56,75 +56,36 @@ public sealed class PostgresGreenRideRepository : IGreenRideRepository
                                 RETURNING id";
         try
         {
-            using var conn = GetConnection();
-            conn.Open();
+            await using var conn = GetConnection();
+            await conn.OpenAsync();
 
-            using (var cek = new NpgsqlCommand(cekSql, conn))
+            await using (var cek = new NpgsqlCommand(cekSql, conn))
             {
                 cek.Parameters.AddWithValue("email", email.Trim().ToLower());
-                if (Convert.ToInt64(cek.ExecuteScalar()) > 0) return null;
+                var count = Convert.ToInt64(await cek.ExecuteScalarAsync());
+                if (count > 0)
+                    return AuthResult.Fail("Email sudah terdaftar.");
             }
 
             var hash = BCrypt.Net.BCrypt.HashPassword(password);
-            using var ins = new NpgsqlCommand(insSql, conn);
+            await using var ins = new NpgsqlCommand(insSql, conn);
             ins.Parameters.AddWithValue("nama",  nama.Trim());
             ins.Parameters.AddWithValue("email", email.Trim().ToLower());
             ins.Parameters.AddWithValue("hash",  hash);
 
-            var newId = (Guid)ins.ExecuteScalar()!;
-            return new AccountInfo(newId, nama.Trim(), email.Trim().ToLower());
+            var newId = (Guid)(await ins.ExecuteScalarAsync())!;
+            return AuthResult.Ok(new UserAccount(newId, nama.Trim(), email.Trim().ToLower()));
         }
-        catch (Exception ex) { Console.WriteLine("REGISTER ERROR: " + ex.Message); return null; }
-    }
-
-    // ── Moda Transportasi ──────────────────────────────────────────────────────
-    public IReadOnlyList<TransportMode> GetTransportModes()
-    {
-        const string sql = "SELECT id, nama, faktor_emisi FROM transport_modes ORDER BY id";
-        var list = new List<TransportMode>();
-        try
+        catch (Exception ex)
         {
-            using var conn = GetConnection();
-            conn.Open();
-            using var cmd  = new NpgsqlCommand(sql, conn);
-            using var reader = cmd.ExecuteReader();
-            while (reader.Read())
-                list.Add(new TransportMode(
-                    reader.GetInt32(0),
-                    reader.GetString(1),
-                    (double)reader.GetDecimal(2)));
+            Console.WriteLine("REGISTER ERROR: " + ex.Message);
+            return AuthResult.Fail("Gagal mendaftar. Coba lagi.");
         }
-        catch { }
-        return list;
     }
 
-    // ── Trip ───────────────────────────────────────────────────────────────────
-    public TripLog StartTrip(Guid userId, int modaId)
-    {
-        const string sql = @"INSERT INTO trip_logs (user_id, moda_id, tanggal, waktu_mulai)
-                             VALUES (@uid, @mid, @tgl, @wm)
-                             RETURNING id";
-        try
-        {
-            using var conn = GetConnection();
-            conn.Open();
+    // ── ITripService ──────────────────────────────────────────────────────────
 
-            var now   = DateTime.UtcNow;                         // konsisten dengan NOW() (UTC) di PostgreSQL
-            var today = DateOnly.FromDateTime(DateTime.Now);     // tanggal tetap mengikuti hari lokal
-
-            using var cmd = new NpgsqlCommand(sql, conn);
-            cmd.Parameters.AddWithValue("uid", userId);
-            cmd.Parameters.AddWithValue("mid", modaId);
-            cmd.Parameters.Add(new NpgsqlParameter("tgl", NpgsqlTypes.NpgsqlDbType.Date) { Value = today });
-            cmd.Parameters.AddWithValue("wm", now);
-
-            var id = (Guid)cmd.ExecuteScalar()!;
-            return new TripLog(id, userId, modaId, today, now, null, null, null, false);
-        }
-        catch (Exception ex) { Console.WriteLine("STARTTRIP ERROR: " + ex.Message); throw; }
-    }
-
-    public TripLog? GetActiveTrip(Guid userId)
+    public async Task<TripLog?> GetActiveTripAsync(Guid userId)
     {
         const string sql = @"SELECT id, user_id, moda_id, tanggal, waktu_mulai
                              FROM trip_logs
@@ -132,138 +93,72 @@ public sealed class PostgresGreenRideRepository : IGreenRideRepository
                              LIMIT 1";
         try
         {
-            using var conn = GetConnection();
-            conn.Open();
-            using var cmd  = new NpgsqlCommand(sql, conn);
+            await using var conn = GetConnection();
+            await conn.OpenAsync();
+            await using var cmd = new NpgsqlCommand(sql, conn);
             cmd.Parameters.AddWithValue("uid", userId);
-            using var reader = cmd.ExecuteReader();
-            if (!reader.Read()) return null;
+            await using var reader = await cmd.ExecuteReaderAsync();
+            if (!await reader.ReadAsync()) return null;
 
-            return new TripLog(
-                reader.GetGuid(0),
-                reader.GetGuid(1),
-                reader.GetInt32(2),
-                reader.GetFieldValue<DateOnly>(3),
-                reader.GetDateTime(4),
-                null, null, null, false);
+            return new TripLog
+            {
+                Id         = reader.GetGuid(0),
+                UserId     = reader.GetGuid(1),
+                ModaId     = reader.GetInt32(2),
+                Tanggal    = reader.GetFieldValue<DateOnly>(3),
+                WaktuMulai = reader.GetDateTime(4),
+            };
         }
         catch { return null; }
     }
 
-    public TripLog CompleteTrip(Guid tripId, decimal faktorEmisi)
+    public async Task<TripLog> StartTripAsync(Guid userId, int modaId)
     {
-        // Durasi & emisi dihitung di SQL (waktu server) — "Cloud Timer".
-        const string sql = @"UPDATE trip_logs
-                             SET waktu_selesai = NOW(),
-                                 durasi_menit  = EXTRACT(EPOCH FROM NOW() - waktu_mulai) / 60,
-                                 emisi_kg      = ROUND((EXTRACT(EPOCH FROM NOW() - waktu_mulai) / 60 * @faktorEmisi)::numeric, 4)
-                             WHERE id = @tripId
-                             RETURNING id, user_id, moda_id, tanggal, waktu_mulai,
-                                       waktu_selesai, durasi_menit, emisi_kg, is_revised";
+        const string sql = @"INSERT INTO trip_logs (user_id, moda_id, tanggal, waktu_mulai)
+                             VALUES (@uid, @mid, @tgl, @wm)
+                             RETURNING id";
         try
         {
-            using var conn = GetConnection();
-            conn.Open();
-            using var cmd = new NpgsqlCommand(sql, conn);
-            cmd.Parameters.AddWithValue("tripId", tripId);
-            cmd.Parameters.Add(new NpgsqlParameter("faktorEmisi", NpgsqlTypes.NpgsqlDbType.Numeric) { Value = faktorEmisi });
-            using var reader = cmd.ExecuteReader();
-            if (!reader.Read()) throw new InvalidOperationException("Trip tidak ditemukan.");
+            await using var conn = GetConnection();
+            await conn.OpenAsync();
 
-            return new TripLog(
-                reader.GetGuid(0),
-                reader.GetGuid(1),
-                reader.GetInt32(2),
-                reader.GetFieldValue<DateOnly>(3),
-                reader.GetDateTime(4),
-                reader.IsDBNull(5) ? null : reader.GetDateTime(5),
-                reader.IsDBNull(6) ? null : reader.GetDecimal(6),
-                reader.IsDBNull(7) ? null : reader.GetDecimal(7),
-                reader.GetBoolean(8));
-        }
-        catch (Exception ex) { Console.WriteLine("COMPLETETRIP ERROR: " + ex.Message); throw; }
-    }
+            var now   = DateTime.Now;
+            var today = DateOnly.FromDateTime(DateTime.Now);
 
-    public IReadOnlyList<TripLog> GetTripLogs(Guid userId, DateOnly from, DateOnly to)
-    {
-        const string sql = @"SELECT id, user_id, moda_id, tanggal, waktu_mulai,
-                                    waktu_selesai, durasi_menit, emisi_kg, is_revised
-                             FROM trip_logs
-                             WHERE user_id = @uid
-                               AND tanggal BETWEEN @from AND @to
-                             ORDER BY tanggal, waktu_mulai";
-        var list = new List<TripLog>();
-        try
-        {
-            using var conn = GetConnection();
-            conn.Open();
-            using var cmd  = new NpgsqlCommand(sql, conn);
+            await using var cmd = new NpgsqlCommand(sql, conn);
             cmd.Parameters.AddWithValue("uid", userId);
-            cmd.Parameters.Add(new NpgsqlParameter("from", NpgsqlTypes.NpgsqlDbType.Date) { Value = from });
-            cmd.Parameters.Add(new NpgsqlParameter("to",   NpgsqlTypes.NpgsqlDbType.Date) { Value = to   });
-            using var reader = cmd.ExecuteReader();
-            while (reader.Read())
-                list.Add(new TripLog(
-                    reader.GetGuid(0),
-                    reader.GetGuid(1),
-                    reader.GetInt32(2),
-                    reader.GetFieldValue<DateOnly>(3),
-                    reader.GetDateTime(4),
-                    reader.IsDBNull(5)  ? null : reader.GetDateTime(5),
-                    reader.IsDBNull(6)  ? null : reader.GetDecimal(6),
-                    reader.IsDBNull(7)  ? null : reader.GetDecimal(7),
-                    reader.GetBoolean(8)));
-        }
-        catch { }
-        return list;
-    }
+            cmd.Parameters.AddWithValue("mid", modaId);
+            cmd.Parameters.Add(new NpgsqlParameter("tgl", NpgsqlTypes.NpgsqlDbType.Date) { Value = today });
+            cmd.Parameters.AddWithValue("wm",  now);
 
-    public void UpdateTripLog(Guid tripId, int modaIdBaru, decimal faktorEmisiBaru)
-    {
-        const string selSql = "SELECT durasi_menit FROM trip_logs WHERE id = @id";
-        const string updSql = @"UPDATE trip_logs
-                                SET moda_id    = @mid,
-                                    emisi_kg   = @emisi,
-                                    is_revised = TRUE
-                                WHERE id = @id";
-        try
-        {
-            using var conn = GetConnection();
-            conn.Open();
-
-            decimal? durasi;
-            using (var sel = new NpgsqlCommand(selSql, conn))
+            var id = (Guid)(await cmd.ExecuteScalarAsync())!;
+            return new TripLog
             {
-                sel.Parameters.AddWithValue("id", tripId);
-                var raw = sel.ExecuteScalar();
-                durasi = raw is null || raw is DBNull ? null : Convert.ToDecimal(raw);
-            }
-
-            var emisiKg = durasi.HasValue ? durasi.Value * faktorEmisiBaru : (decimal?)null;
-
-            using var upd = new NpgsqlCommand(updSql, conn);
-            upd.Parameters.AddWithValue("mid",   modaIdBaru);
-            upd.Parameters.AddWithValue("emisi", (object?)emisiKg ?? DBNull.Value);
-            upd.Parameters.AddWithValue("id",    tripId);
-            upd.ExecuteNonQuery();
+                Id         = id,
+                UserId     = userId,
+                ModaId     = modaId,
+                Tanggal    = today,
+                WaktuMulai = now,
+            };
         }
-        catch { }
+        catch (Exception ex)
+        {
+            Console.WriteLine("STARTTRIP ERROR: " + ex.Message);
+            throw;
+        }
     }
 
-    /// <summary>
-    /// Revisi waktu mulai/selesai. Durasi &amp; emisi dihitung ulang di SQL;
-    /// faktor emisi diambil dari transport_modes lewat moda_id trip.
-    /// </summary>
-    public async Task<TripLog?> UpdateTripLog(Guid tripId, DateTime waktuMulai, DateTime waktuSelesai)
+    public async Task<TripLog> StopTripAsync(Guid userId)
     {
         const string sql = @"UPDATE trip_logs t
-                             SET waktu_mulai   = @waktuMulai,
-                                 waktu_selesai = @waktuSelesai,
-                                 durasi_menit  = EXTRACT(EPOCH FROM (@waktuSelesai - @waktuMulai)) / 60,
-                                 emisi_kg      = ROUND((EXTRACT(EPOCH FROM (@waktuSelesai - @waktuMulai)) / 60 * m.faktor_emisi)::numeric, 4),
-                                 is_revised    = TRUE
+                             SET waktu_selesai = NOW() AT TIME ZONE 'Asia/Jakarta',
+                                 durasi_menit  = EXTRACT(EPOCH FROM NOW() AT TIME ZONE 'Asia/Jakarta' - t.waktu_mulai) / 60,
+                                 emisi_kg      = ROUND(
+                                     (EXTRACT(EPOCH FROM NOW() AT TIME ZONE 'Asia/Jakarta' - t.waktu_mulai) / 60 * m.faktor_emisi)::numeric, 4)
                              FROM transport_modes m
-                             WHERE t.id = @tripId AND m.id = t.moda_id
+                             WHERE t.user_id = @uid
+                               AND t.waktu_selesai IS NULL
+                               AND m.id = t.moda_id
                              RETURNING t.id, t.user_id, t.moda_id, t.tanggal, t.waktu_mulai,
                                        t.waktu_selesai, t.durasi_menit, t.emisi_kg, t.is_revised";
         try
@@ -271,39 +166,218 @@ public sealed class PostgresGreenRideRepository : IGreenRideRepository
             await using var conn = GetConnection();
             await conn.OpenAsync();
             await using var cmd = new NpgsqlCommand(sql, conn);
-            cmd.Parameters.AddWithValue("tripId", tripId);
-            cmd.Parameters.Add(new NpgsqlParameter("waktuMulai",   NpgsqlTypes.NpgsqlDbType.Timestamp) { Value = waktuMulai });
-            cmd.Parameters.Add(new NpgsqlParameter("waktuSelesai", NpgsqlTypes.NpgsqlDbType.Timestamp) { Value = waktuSelesai });
+            cmd.Parameters.AddWithValue("uid", userId);
             await using var reader = await cmd.ExecuteReaderAsync();
-            if (!await reader.ReadAsync()) return null;
+            if (!await reader.ReadAsync())
+                throw new ServiceException("Tidak ada trip yang sedang berjalan.");
 
-            return new TripLog(
-                reader.GetGuid(0),
-                reader.GetGuid(1),
-                reader.GetInt32(2),
-                reader.GetFieldValue<DateOnly>(3),
-                reader.GetDateTime(4),
-                reader.IsDBNull(5) ? null : reader.GetDateTime(5),
-                reader.IsDBNull(6) ? null : reader.GetDecimal(6),
-                reader.IsDBNull(7) ? null : reader.GetDecimal(7),
-                reader.GetBoolean(8));
+            return ReadTripLog(reader);
         }
-        catch (Exception ex) { Console.WriteLine("UPDATETRIPLOG ERROR: " + ex.Message); throw; }
+        catch (ServiceException) { throw; }
+        catch (Exception ex)
+        {
+            Console.WriteLine("STOPTRIP ERROR: " + ex.Message);
+            throw new ServiceException("Gagal menghentikan trip.");
+        }
     }
 
-    // ── Badge & Leaderboard (dikerjakan Aqidatul — belum diimplementasi) ───────
-    public WeeklyBadge? GetPreviousWeekBadge(Guid userId)
+    public async Task<IReadOnlyList<TripLog>> GetLogsAsync(Guid userId, DateOnly tanggal)
+    {
+        const string sql = @"SELECT id, user_id, moda_id, tanggal, waktu_mulai,
+                                    waktu_selesai, durasi_menit, emisi_kg, is_revised
+                             FROM trip_logs
+                             WHERE user_id = @uid AND tanggal = @tgl
+                             ORDER BY waktu_mulai";
+        var list = new List<TripLog>();
+        try
+        {
+            await using var conn = GetConnection();
+            await conn.OpenAsync();
+            await using var cmd = new NpgsqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("uid", userId);
+            cmd.Parameters.Add(new NpgsqlParameter("tgl", NpgsqlTypes.NpgsqlDbType.Date) { Value = tanggal });
+            await using var reader = await cmd.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+                list.Add(ReadTripLog(reader));
+        }
+        catch { }
+        return list;
+    }
+
+    public async Task<TripLog> ReviseTripAsync(
+        Guid userId, Guid logId, int modaId,
+        DateTime waktuMulai, DateTime waktuSelesai)
+    {
+        const string checkSql = @"SELECT tanggal FROM trip_logs
+                                  WHERE id = @id AND user_id = @uid LIMIT 1";
+        const string updSql   = @"UPDATE trip_logs t
+                                  SET moda_id       = @mid,
+                                      waktu_mulai   = @wm,
+                                      waktu_selesai = @ws,
+                                      durasi_menit  = EXTRACT(EPOCH FROM (@ws - @wm)) / 60,
+                                      emisi_kg      = ROUND(
+                                          (EXTRACT(EPOCH FROM (@ws - @wm)) / 60 * m.faktor_emisi)::numeric, 4),
+                                      is_revised    = TRUE
+                                  FROM transport_modes m
+                                  WHERE t.id = @id AND m.id = @mid
+                                  RETURNING t.id, t.user_id, t.moda_id, t.tanggal, t.waktu_mulai,
+                                            t.waktu_selesai, t.durasi_menit, t.emisi_kg, t.is_revised";
+        try
+        {
+            await using var conn = GetConnection();
+            await conn.OpenAsync();
+
+            await using (var check = new NpgsqlCommand(checkSql, conn))
+            {
+                check.Parameters.AddWithValue("id",  logId);
+                check.Parameters.AddWithValue("uid", userId);
+                var raw = await check.ExecuteScalarAsync();
+                if (raw is null)
+                    throw new ServiceException("Log tidak ditemukan.");
+                if (DateOnly.FromDateTime((DateTime)raw) != DateOnly.FromDateTime(DateTime.Now))
+                    throw new ServiceException("Hanya log hari ini yang bisa direvisi.");
+            }
+
+            const string overlapSql = @"SELECT COUNT(*) FROM trip_logs
+                             WHERE user_id = @uid
+                               AND id != @id
+                               AND tanggal = @tgl::date
+                               AND waktu_selesai IS NOT NULL
+                               AND waktu_mulai < @ws
+                               AND waktu_selesai > @wm";
+
+            await using (var ovl = new NpgsqlCommand(overlapSql, conn))
+            {
+                ovl.Parameters.AddWithValue("uid", userId);
+                ovl.Parameters.AddWithValue("id",  logId);
+                ovl.Parameters.Add(new NpgsqlParameter("tgl", NpgsqlTypes.NpgsqlDbType.Date) { Value = DateOnly.FromDateTime(DateTime.Now) });
+                ovl.Parameters.Add(new NpgsqlParameter("wm", NpgsqlTypes.NpgsqlDbType.Timestamp) { Value = waktuMulai });
+                ovl.Parameters.Add(new NpgsqlParameter("ws", NpgsqlTypes.NpgsqlDbType.Timestamp) { Value = waktuSelesai });
+                var count = Convert.ToInt64(await ovl.ExecuteScalarAsync());
+                if (count > 0)
+                    throw new ServiceException("Waktu bertabrakan dengan perjalanan lain hari ini.");
+            }
+
+            await using var upd = new NpgsqlCommand(updSql, conn);
+            upd.Parameters.AddWithValue("id",  logId);
+            upd.Parameters.AddWithValue("mid", modaId);
+            upd.Parameters.Add(new NpgsqlParameter("wm", NpgsqlTypes.NpgsqlDbType.Timestamp) { Value = waktuMulai   });
+            upd.Parameters.Add(new NpgsqlParameter("ws", NpgsqlTypes.NpgsqlDbType.Timestamp) { Value = waktuSelesai });
+            await using var reader = await upd.ExecuteReaderAsync();
+            if (!await reader.ReadAsync())
+                throw new ServiceException("Revisi gagal.");
+
+            return ReadTripLog(reader);
+        }
+        catch (ServiceException) { throw; }
+        catch (Exception ex)
+        {
+            Console.WriteLine("REVISE ERROR: " + ex.Message);
+            throw new ServiceException("Gagal merevisi log.");
+        }
+    }
+
+    // ── IEmissionService ──────────────────────────────────────────────────────
+
+    public async Task<IReadOnlyList<CalendarDayEmission>> GetMonthAsync(
+        Guid userId, int year, int month)
+    {
+        const string sql = @"SELECT d::date,
+                                    SUM(tl.emisi_kg)
+                             FROM generate_series(
+                                 date_trunc('month', make_date(@year, @month, 1)),
+                                 date_trunc('month', make_date(@year, @month, 1)) + interval '1 month - 1 day',
+                                 interval '1 day') d
+                             LEFT JOIN trip_logs tl
+                                    ON tl.tanggal = d::date
+                                   AND tl.user_id = @uid
+                                   AND tl.waktu_selesai IS NOT NULL
+                             GROUP BY d
+                             ORDER BY d";
+        var list = new List<CalendarDayEmission>();
+        try
+        {
+            await using var conn = GetConnection();
+            await conn.OpenAsync();
+            await using var cmd = new NpgsqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("uid",   userId);
+            cmd.Parameters.AddWithValue("year",  year);
+            cmd.Parameters.AddWithValue("month", month);
+            await using var reader = await cmd.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+            {
+                var tanggal = reader.GetFieldValue<DateOnly>(0);
+                var emisi   = reader.IsDBNull(1) ? (decimal?)null : reader.GetDecimal(1);
+                list.Add(new CalendarDayEmission(tanggal, emisi));
+            }
+        }
+        catch (Exception ex) { Console.WriteLine("GETMONTH ERROR: " + ex.Message); }
+        return list;
+    }
+
+    public async Task<IReadOnlyList<WeeklyEmissionPoint>> GetWeeklyAsync(
+        Guid userId, int year, int month)
+    {
+        const string sql = @"SELECT date_trunc('week', tanggal::timestamp)::date AS minggu_mulai,
+                                    SUM(emisi_kg) AS total_emisi
+                             FROM trip_logs
+                             WHERE user_id = @uid
+                               AND EXTRACT(YEAR  FROM tanggal) = @year
+                               AND EXTRACT(MONTH FROM tanggal) = @month
+                               AND waktu_selesai IS NOT NULL
+                             GROUP BY minggu_mulai
+                             ORDER BY minggu_mulai";
+        var list = new List<WeeklyEmissionPoint>();
+        try
+        {
+            await using var conn = GetConnection();
+            await conn.OpenAsync();
+            await using var cmd = new NpgsqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("uid",   userId);
+            cmd.Parameters.AddWithValue("year",  year);
+            cmd.Parameters.AddWithValue("month", month);
+            await using var reader = await cmd.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+            {
+                var minggu = reader.GetFieldValue<DateOnly>(0);
+                var total  = reader.GetDecimal(1);
+                list.Add(new WeeklyEmissionPoint(minggu, total, true));
+            }
+        }
+        catch (Exception ex) { Console.WriteLine("GETWEEKLY ERROR: " + ex.Message); }
+        return list;
+    }
+
+    // ── IBadgeProgressService ─────────────────────────────────────────────────
+    // Dikerjakan Aqidatul — belum diimplementasi
+
+    public Task SettleCompletedWeeksAsync(Guid userId)
         => throw new NotImplementedException();
 
-    public IReadOnlyList<WeeklyBadge> GetAllWeeklyBadges(Guid userId)
+    public Task<WeeklyBadgeRecord?> GetLastWeekBadgeAsync(Guid userId)
         => throw new NotImplementedException();
 
-    public void AddWeeklyBadge(WeeklyBadge badge)
+    public Task<IReadOnlyList<WeeklyBadgeRecord>> GetEarnedBadgesAsync(Guid userId)
         => throw new NotImplementedException();
 
-    public Dictionary<DateOnly, decimal> GetCalendarEmission(Guid userId, int year, int month)
+    // ── ILeaderboardService ───────────────────────────────────────────────────
+    // Dikerjakan Aqidatul — belum diimplementasi
+
+    public Task<IReadOnlyList<LeaderboardEntry>> GetCurrentWeekAsync(Guid userId)
         => throw new NotImplementedException();
 
-    public IReadOnlyList<LeaderboardEntry> GetLeaderboard(DateOnly weekStart)
-        => throw new NotImplementedException();
+    // ── Helper ────────────────────────────────────────────────────────────────
+
+    private static TripLog ReadTripLog(NpgsqlDataReader r) => new TripLog
+    {
+        Id           = r.GetGuid(0),
+        UserId       = r.GetGuid(1),
+        ModaId       = r.GetInt32(2),
+        Tanggal      = r.GetFieldValue<DateOnly>(3),
+        WaktuMulai   = r.GetDateTime(4),
+        WaktuSelesai = r.IsDBNull(5) ? null : r.GetDateTime(5),
+        DurasiMenit  = r.IsDBNull(6) ? null : r.GetDecimal(6),
+        EmisiKg      = r.IsDBNull(7) ? null : r.GetDecimal(7),
+        IsRevised    = r.GetBoolean(8),
+    };
 }
