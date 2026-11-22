@@ -4,13 +4,14 @@ using GreenRide.UI.Models;
 namespace GreenRide.UI.Services;
 
 /// <summary>
-/// Hitungan emisi, poin, dan badge — semua menggunakan API baru
-/// (Guid userId, TripLog, DateOnly).
-/// Metode badge Aqidatul masih NotImplementedException di repository;
-/// dibungkus try-catch agar tidak crash.
+/// Hitungan emisi, poin, dan badge mingguan. Aturan badge (PRD 5.5):
+/// periode Senin–Minggu, wajib tercatat 7 hari, hanya badge tertinggi yang diberikan.
 /// </summary>
 public sealed class GamificationService
 {
+    private const int HariMinimum = 7;   // syarat hari tercatat dalam satu minggu
+    private const int MingguDicek = 8;   // berapa minggu ke belakang dicek saat refresh
+
     private readonly IGreenRideRepository _repo;
     public GamificationService(IGreenRideRepository repo) => _repo = repo;
 
@@ -31,81 +32,68 @@ public sealed class GamificationService
     public double EmisiMinggu(Guid userId, DateOnly weekStart) =>
         Emisi(_repo.GetTripLogs(userId, weekStart, weekStart.AddDays(6)));
 
+    /// <summary>Selisih emisi dibanding naik mobil, dihitung dari durasi sebenarnya (menit desimal).</summary>
     public double EmisiDihindari(Guid userId)
     {
         var from = DateOnly.FromDateTime(DateTime.Today.AddYears(-2));
-        var to   = DateOnly.FromDateTime(DateTime.Today);
+        var to = DateOnly.FromDateTime(DateTime.Today);
         return _repo.GetTripLogs(userId, from, to)
-            .Sum(l =>
-            {
-                if (!l.WaktuSelesai.HasValue || l.EmisiKg is null) return 0d;
-                int dur = (int)(l.WaktuSelesai.Value - l.WaktuMulai).TotalMinutes;
-                return Math.Max(0d,
-                    ModeCatalog.FaktorAcuanMobil * dur - (double)l.EmisiKg.Value);
-            });
+            .Where(l => !l.IsActive)
+            .Sum(l => Math.Max(0d,
+                ModeCatalog.FaktorAcuanMobil * (double)(l.DurasiMenit ?? 0m)
+                - (double)(l.EmisiKg ?? 0m)));
     }
 
     // ── Poin & Badge ───────────────────────────────────────────────────────
 
+    /// <summary>1 poin = 0,1 kg CO₂ yang dihindari dibanding naik mobil.</summary>
     public int TotalPoin(Guid userId) =>
         (int)Math.Round(EmisiDihindari(userId) * 10);
 
+    /// <summary>Badge tertinggi (batas paling ketat) yang dipenuhi total emisi mingguan tertentu.</summary>
     public BadgeDefinition? TierUntuk(double kg) =>
         BadgeRules.All.OrderBy(b => b.BatasKg).FirstOrDefault(b => kg <= b.BatasKg);
 
-    /// <summary>
-    /// Set BadgeId yang sudah diraih (dicocokkan lewat BadgeName di WeeklyBadge).
-    /// Jika metode repository belum diimplementasi (Aqidatul), kembalikan set kosong.
-    /// </summary>
+    /// <summary>BadgeId yang pernah diraih (dicocokkan lewat BadgeName di weekly_badges).</summary>
     public HashSet<int> BadgeDiraih(Guid userId)
     {
-        try
-        {
-            var names = _repo.GetAllWeeklyBadges(userId)
-                             .Where(b => b.HasBadge)
-                             .Select(b => b.BadgeName!)
-                             .ToHashSet();
-            return BadgeRules.All
-                .Where(d => names.Contains(d.Nama))
-                .Select(d => d.BadgeId)
-                .ToHashSet();
-        }
-        catch (NotImplementedException)
-        {
-            return new HashSet<int>();
-        }
+        var names = _repo.GetAllWeeklyBadges(userId)
+                         .Where(b => b.HasBadge)
+                         .Select(b => b.BadgeName!)
+                         .ToHashSet();
+        return BadgeRules.All
+            .Where(d => names.Contains(d.Nama))
+            .Select(d => d.BadgeId)
+            .ToHashSet();
     }
 
     /// <summary>
-    /// Evaluasi dan simpan badge untuk 8 minggu terakhir.
-    /// Jika metode repository belum diimplementasi, operasi dilewati.
+    /// Menilai minggu-minggu yang sudah lewat (maks. 8 minggu ke belakang) yang belum tersimpan.
+    /// Minggu dengan catatan selalu disimpan; badge kosong bila hari tercatat kurang dari 7.
     /// </summary>
     public void RefreshBadges(Guid userId)
     {
-        try
+        var mingguIni = DateOnly.FromDateTime(StartOfWeek(DateTime.Today));
+        var sudahAda = _repo.GetAllWeeklyBadges(userId).Select(b => b.MingguMulai).ToHashSet();
+
+        for (int w = 1; w <= MingguDicek; w++)
         {
-            var thisWeek = DateOnly.FromDateTime(StartOfWeek(DateTime.Today));
-            var existing = _repo.GetAllWeeklyBadges(userId);
+            var mulai = mingguIni.AddDays(-7 * w);
+            var selesai = mulai.AddDays(6);
+            if (sudahAda.Contains(mulai)) continue;
 
-            for (int w = 1; w <= 8; w++)
-            {
-                var ws = thisWeek.AddDays(-7 * w);
-                var we = ws.AddDays(6);
-                var logs = _repo.GetTripLogs(userId, ws, we);
-                if (logs.Count == 0) continue;
+            var logs = _repo.GetTripLogs(userId, mulai, selesai)
+                            .Where(l => !l.IsActive)
+                            .ToList();
+            if (logs.Count == 0) continue;   // minggu tanpa catatan tidak disimpan
 
-                var total = Emisi(logs);
-                var tier  = TierUntuk(total);
-                if (tier is null) continue;
+            var total = logs.Sum(l => l.EmisiKg ?? 0m);
+            var hari = logs.Select(l => l.Tanggal).Distinct().Count();
 
-                bool sudahAda = existing.Any(b => b.MingguMulai == ws);
-                if (sudahAda) continue;
+            // Kurang dari 7 hari tercatat = tidak dapat badge
+            var badge = hari < HariMinimum ? null : TierUntuk((double)total);
 
-                int hari = logs.Select(l => l.Tanggal).Distinct().Count();
-                _repo.AddWeeklyBadge(
-                    new WeeklyBadge(userId, ws, we, (decimal)total, tier.Nama, hari));
-            }
+            _repo.AddWeeklyBadge(new WeeklyBadge(userId, mulai, selesai, total, badge?.Nama, hari));
         }
-        catch (NotImplementedException) { }
     }
 }

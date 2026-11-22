@@ -23,8 +23,8 @@ public partial class CalendarDay : ObservableObject
         Fill = Brush.Parse(emisiKg switch
         {
             null => "#EAF4E4",          // belum ada catatan
-            <= 0.5 => "#81C784",        // sangat hijau
-            <= 2.0 => "#FFE082",        // sedang
+            <= 0.43 => "#81C784",       // sangat hijau (≤ 3 kg/minggu ÷ 7 hari)
+            <= 1.43 => "#FFE082",       // sedang (≤ 10 kg/minggu ÷ 7 hari)
             _ => "#FFAB91",             // tinggi
         });
     }
